@@ -22,7 +22,7 @@ class Openfrmt {
    * @param {Software} software 
    * @param {Company} company 
    */
-  constructor(destination, software, company) {
+  constructor(destination, software, company, invoices) {
     this.destination = destination || '';
     this.software = {
       name: software.name,
@@ -35,30 +35,43 @@ class Openfrmt {
     }
 
     this.bkmFileStream = null;
-    this.iniFileStream = null
+    this.iniFileStream = null;
+    this.invoices = invoices;
   }
 
   async generateBkmFile(companyId, fromDate, toDate) {
     const { firstFolderName, secondFolderName } = this.getFilesPath();
     const foldersPath = `${this.destination}/${firstFolderName}/${secondFolderName}`;
+    const uniqueFileId = this.getUniqueValue();
     
-    const headerId = 0;
-    
+    const headerId = 0;    
     let currentLine = 1;
     let C100LinesCount = 0;
     let D110LinesCount = 0;
     let D120LinesCount = 0;
 
     try {
-      const uniqueFileId = this.getUniqueValue();
       await this.createFolders(foldersPath);
-      this.bkmFileStream = fs.createWriteStream(path.resolve(__dirname, foldersPath, 'BKMVDATA.txt'));
-      this.iniFileStream = fs.createWriteStream(path.resolve(__dirname, foldersPath, 'INI.txt'));
+      await this.createStreams(foldersPath);
+
       this.writeA100(uniqueFileId, currentLine, this.company);
+
+      currentLine += 1;
+
+      this.invoices.map((invoice) => {
+        this.writeC100();
+        C100LinesCount += 1;
+        currentLine += 1;
+        itemNumber = 1;
+      })
     } catch (error) {
 
     }
-    // const iniFile = '';
+  }
+
+  createStreams(foldersPath) {
+    this.bkmFileStream = fs.createWriteStream(path.resolve(__dirname, foldersPath, 'BKMVDATA.txt'));
+    this.iniFileStream = fs.createWriteStream(path.resolve(__dirname, foldersPath, 'INI.txt'));
   }
 
   getFilesPath() {
@@ -92,33 +105,56 @@ class Openfrmt {
     return Math.floor((1 + Math.random()) * 1000000000000000)
   }
 
-
-
   async writeA100(uniqueFile, currentLine, company) {
     const A100 = 'A100';
     if (!this.bkmFileStream) {
       throw new Error('[writeA100] No bkmFileStream')
     }
 
-    await this.writeToBkmStream(A100, A100.length, false)
-    await this.writeToBkmStream(currentLine, 9, true)
-    await this.writeToBkmStream(company.id, 9, true)
-    await this.writeToBkmStream(uniqueFile.toString(), 15, true);
-    await this.writeToBkmStream('&OF1.31&', 8, false);
-    await this.writeToBkmStream('', 50, false);
+    try { 
+      await this.writeToBkmStream({ text: A100, maxLength: A100.length, isNumeric: false })
+      await this.writeToBkmStream({ text: currentLine,  maxLength: 9,  isNumeric: true })
+      await this.writeToBkmStream({ text: company.id, maxLength: 9, isNumeric: true })
+      await this.writeToBkmStream({ text: uniqueFile.toString(), maxLength: 15, isNumeric: true });
+      await this.writeToBkmStream({ text: '&OF1.31&',  maxLength: 8,  isNumeric: false });
+      await this.writeToBkmStream({ text: '', maxLength: 50, isNumeric: false });
+      await this.writeToBkmStream({ text: '\r\n', withoutPad: true });
+    } catch (error) {
+      console.log(`[writeA100] Error: ${error}`);
+    }
   }
 
-  writeToBkmStream(text, maxLength, isNumeric) {
+  async writeC100() {
+    if (!this.bkmFileStream) {
+      throw new Error('[writeC100] No bkmFileStream')
+    }
+
+    try {
+      await this.writeToBkmStream({ text: 'C100', withoutPad: true });
+      await this.writeToBkmStream({
+        
+      })
+    } catch (error) {
+
+    }
+  }
+
+  writeToBkmStream({ 
+    text, 
+    maxLength, 
+    isNumeric, 
+    withoutPad = false
+  }) {
     try { 
       if (text == null) {
         text = '';
       }
 
-      if (text.length > maxLength) {
+      if (!withoutPad && text.length > maxLength) {
         text = text.substring(0, maxLength);
       }
 
-      const paddedText = leftpad(text, maxLength, isNumeric ? '0' : ' ')
+      const paddedText = withoutPad ? text : leftpad(text, maxLength, isNumeric ? '0' : ' ')
       this.bkmFileStream.write(paddedText);
     } catch (error) {
       console.log(error);

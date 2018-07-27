@@ -33,6 +33,6 @@ const company = {
   id: '12345678'
 }
 
-const openfrmt = new Openfrmt('./', software, company);
+const openfrmt = new Openfrmt('./', software, company, mock);
 
 console.log(openfrmt.generateBkmFile());
