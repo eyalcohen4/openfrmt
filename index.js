@@ -37,6 +37,12 @@ class Openfrmt {
     this.bkmFileStream = null;
     this.iniFileStream = null;
     this.invoices = invoices;
+
+    this.currentFile = 0;
+    this.currentLine = 1;
+    this.C100LinesCount = 0;
+    this.D110LinesCount = 0;
+    this.D120LinesCount = 0;
   }
 
   async generateBkmFile(companyId, fromDate, toDate) {
@@ -44,26 +50,17 @@ class Openfrmt {
     const foldersPath = `${this.destination}/${firstFolderName}/${secondFolderName}`;
     const uniqueFileId = this.getUniqueValue();
     
-    const headerId = 0;    
-    let currentLine = 1;
-    let C100LinesCount = 0;
-    let D110LinesCount = 0;
-    let D120LinesCount = 0;
-
+    const headerId = 0;
+   
     try {
       await this.createFolders(foldersPath);
       await this.createStreams(foldersPath);
 
-      this.writeA100(uniqueFileId, currentLine, this.company);
+      await this.writeA100(uniqueFileId, this.currentLine, this.company);
 
-      currentLine += 1;
+      this.currentLine += 1;
 
-      this.invoices.map((invoice) => {
-        this.writeC100();
-        C100LinesCount += 1;
-        currentLine += 1;
-        itemNumber = 1;
-      })
+      await this.writeInvoicesTitleRow();
     } catch (error) {
 
     }
@@ -105,13 +102,24 @@ class Openfrmt {
     return Math.floor((1 + Math.random()) * 1000000000000000)
   }
 
+  async writeInvoicesTitleRow() {
+    for (let i = 0; i < this.invoices.length; i++) {
+      let itemNumber = 1;
+      console.count('C100');
+      await this.writeC100(this.currentLine, this.invoices[i]);
+      this.C100LinesCount += 1;
+      this.currentLine += 1;
+    }
+  }
+
   async writeA100(uniqueFile, currentLine, company) {
     const A100 = 'A100';
+
     if (!this.bkmFileStream) {
       throw new Error('[writeA100] No bkmFileStream')
     }
 
-    try { 
+    try {
       await this.writeToBkmStream({ text: A100, maxLength: A100.length, isNumeric: false })
       await this.writeToBkmStream({ text: currentLine,  maxLength: 9,  isNumeric: true })
       await this.writeToBkmStream({ text: company.id, maxLength: 9, isNumeric: true })
@@ -124,26 +132,66 @@ class Openfrmt {
     }
   }
 
-  async writeC100() {
+  async writeC100(currentLine, invoice) {
     if (!this.bkmFileStream) {
       throw new Error('[writeC100] No bkmFileStream')
     }
 
     try {
+      const creationDate = invoice.creationDate ? dayjs(invoice.creationDate).format("YYYYMMDD") : '';
+      const creationTime = invoice.creationDate ? dayjs(invoice.creationDate).format("HHmm") : '';
+      const documentDate = invoice.documentDate ? dayjs(invoice.documentDate).format("YYYYMMDD") : '';
+      const { street, houseNumber, city, zipCode, country, countryCode } = invoice.patient.address;
+      
       await this.writeToBkmStream({ text: 'C100', withoutPad: true });
-      await this.writeToBkmStream({
-        
-      })
-    } catch (error) {
+      await this.writeToBkmStream({ text: currentLine, maxLength: 9, isNumeric: true });
+      await this.writeToBkmStream({ text: this.company.id, maxLength: 9, isNumeric: true, withoutPad: true });
+      await this.writeToBkmStream({ text: invoice.type, maxLength: 9, isNumeric: true, withoutPad: true });
+      await this.writeToBkmStream({ text: invoice.serialNumber, maxLength: 20, isNumeric: true });
+      await this.writeToBkmStream({ text: creationDate, maxLength: 8, isNumeric: true });
+      await this.writeToBkmStream({ text: creationTime, maxLength: 4, isNumeric: true });
+      await this.writeToBkmStream({ text: invoice.patient.name, maxLength: 50, isNumeric: false });
+      
+      this.conditonalWritingToBkmStream(street && street.length, { text: street, maxLength: 50, isNumeric: false });
+      this.conditonalWritingToBkmStream(houseNumber && houseNumber.length, { text: houseNumber, maxLength: 10, isNumeric: false });
+      this.conditonalWritingToBkmStream(city && city.length, { text: city, maxLength: 30, isNumeric: false });
+      this.conditonalWritingToBkmStream(zipCode && zipCode.length, { text: zipCode, maxLength: 8, isNumeric: false });
+      this.conditonalWritingToBkmStream(country && country.length, { text: country, maxLength: 30, isNumeric: false });
+      this.conditonalWritingToBkmStream(countryCode && countryCode.length, { text: countryCode, maxLength: 30, isNumeric: false });
+      
+      await this.writeToBkmStream({ text: invoice.patient.phone, maxLength: 15, isNumeric: false });  
+      await this.writeToBkmStream({ text: invoice.patient.id, maxLength: 9, isNumeric: true });  
+      
+      await this.writeToBkmStream({ text: documentDate, maxLength: 8, isNumeric: false });  
+      
+      // Foreign exchange value - Currently unused.
+      await this.writeToBkmStream({ text: '+00000000000000', maxLength: 15, isNumeric: true });  
+      await this.writeToBkmStream({ text: 'ILS', maxLength: 3, isNumeric: false, withoutPad: true }); 
 
+      await this.writeToBkmStream({ text: invoice.totalIncomeBeforeDiscount, maxLength: 15, isNumeric: true, withPlusSign: true }); 
+      
+      await this.writeToBkmStream({ text: '\r\n', withoutPad: true });
+    } catch (error) {
+      console.log(error);
     }
   }
 
-  writeToBkmStream({ 
+  async conditonalWritingToBkmStream(condition, settings) {
+    try { 
+      if (condition) {
+        await this.writeToBkmStream(settings);
+      }
+    } catch (error) {
+      console.log(`[conditionalWritingToBkmStream] Error: ${error}`)
+    }
+  }
+
+  async writeToBkmStream({ 
     text, 
     maxLength, 
     isNumeric, 
-    withoutPad = false
+    withoutPad = false,
+    withPlusSign = false
   }) {
     try { 
       if (text == null) {
@@ -155,7 +203,7 @@ class Openfrmt {
       }
 
       const paddedText = withoutPad ? text : leftpad(text, maxLength, isNumeric ? '0' : ' ')
-      this.bkmFileStream.write(paddedText);
+      await this.bkmFileStream.write(withPlusSign ? `+${paddedText}` : paddedText);
     } catch (error) {
       console.log(error);
     }

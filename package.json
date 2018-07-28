@@ -1,0 +1,20 @@
+{
+  "name": "openfrmt",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "rm -rf 12345678.18 && node index.test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eyalcohen4/openfrmt.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/eyalcohen4/openfrmt/issues"
+  },
+  "homepage": "https://github.com/eyalcohen4/openfrmt#readme"
+}
