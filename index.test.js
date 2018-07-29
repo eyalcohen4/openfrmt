@@ -13,11 +13,17 @@ const mock = [
       },
       phone: "0775012340"
     },
-    totalIncomeBeforeDiscount: 1200,
+    vatType: 2,
     income: [
       {
         price: 300,
         quantity: 4,
+        currency: 'ILS',
+        vatType: 1
+      },
+      {
+        price: 300,
+        quantity: 1,
         currency: 'ILS',
         vatType: 0
       }
@@ -41,11 +47,11 @@ const mock = [
       },
       phone: "+97254231234"
     },
+    vatType: 0,
     discount: {
       amount: 20,
       type: 'percentage'
     },
-    totalIncomeBeforeDiscount: 600,
     income: [
       {
         price: 300,
@@ -58,7 +64,6 @@ const mock = [
   {
     creationDate: 1532786504 * 1000,
     item: '',
-    quantity: 3,
     price: '',
     type: '320',
     serialNumber: '2234',
@@ -69,7 +74,6 @@ const mock = [
       address: {},
       phone: "0526262412"
     },
-    totalIncomeBeforeDiscount: 250,
     income: [
       {
         price: 250,
