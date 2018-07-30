@@ -23,7 +23,9 @@ class Openfrmt {
    * @param {Company} company 
    */
   constructor(destination, software, company, invoices) {
+    this.invoices = invoices;
     this.destination = destination || '';
+    this.vatRate = 17;
     this.software = {
       name: software.name,
       version: software.version,
@@ -36,7 +38,6 @@ class Openfrmt {
 
     this.bkmFileStream = null;
     this.iniFileStream = null;
-    this.invoices = invoices;
 
     this.currentFile = 0;
     this.currentLine = 1;
@@ -111,8 +112,8 @@ class Openfrmt {
   async writeInvoicesTitleRow() {
     for (let i = 0; i < this.invoices.length; i++) {
       let itemNumber = 1;
-      console.count('C100');
       await this.writeC100(this.currentLine, this.invoices[i]);
+      console.count('C100')
       this.C100LinesCount += 1;
       this.currentLine += 1;
     }
@@ -175,8 +176,20 @@ class Openfrmt {
       const creationTime = invoice.creationDate ? dayjs(invoice.creationDate).format("HHmm") : '';
       const documentDate = invoice.documentDate ? dayjs(invoice.documentDate).format("YYYYMMDD") : '';
       const incomeBeforeDiscount = this.getTotalIncomeBeforeDiscount(invoice.income);
-      const discountAmount = invoice.discount ? this.calculateDiscount(invoice.discount, incomeBeforeDiscount) : 0;
+      const discountAmount = (
+        invoice.discount ? 
+        this.calculateDiscount(invoice.discount, incomeBeforeDiscount) : 
+        0
+      );
       const discountSign = discountAmount && discountAmount > 0 ? '-' : '+';
+      const incomeAfterDiscount = this.financial(incomeBeforeDiscount - discountAmount);
+      const vat = this.calculateVat({ 
+        incomes: invoice.incomes, 
+        total: incomeAfterDiscount,
+        vatType: invoice.vatType
+      });
+      const totalIncomePlusVat = this.financial(parseInt(incomeAfterDiscount) + parseInt(vat));
+
       const {
         street,
         houseNumber,
@@ -310,13 +323,48 @@ class Openfrmt {
       });
       
       await this.writeToBkmStream({
-        text: incomeBeforeDiscount - discountAmount,
+        text: incomeAfterDiscount,
         maxLength: 15,
         isNumeric: true,
         withSign: true,
         sign: '+'
       });
 
+      await this.writeToBkmStream({
+        text: vat,
+        maxLength: 15,
+        isNumeric: true,
+        withSign: true,
+        sign: '+'
+      });
+
+      /** 1223 */
+      await this.writeToBkmStream({
+        text: totalIncomePlusVat,
+        maxLength: 15,
+        isNumeric: true,
+        withSign: true,
+        sign: '+'
+      });
+
+      
+      await this.writeToBkmStream({
+        text: '0',
+        maxLength: 12,
+        isNumeric: true,
+        withSign: true,
+        sign: '+'
+      });
+
+      /** 1225 */
+      await this.writeToBkmStream({
+        text: invoice.id,
+        maxLength: 15,
+        rightPad: true,
+        isNumeric: false,
+      });
+      
+      // Last Row
       await this.writeToBkmStream({
         text: '\r\n',
         withoutPad: true
@@ -334,15 +382,16 @@ class Openfrmt {
     }
 
     if (discount.type === 'percentage') {
-      return (total / 100) * discount.amount;
+      return this.financial(((total / 100) * discount.amount))
     }
 
     // Fixed Value
-    return discount.amount;
+    return this.financial(discount.amount);
   }
 
   calculateIncomeAfterDiscount(discount, total) {
-    return total - this.calculateDiscount(discount, total);
+    const incomeAfterDiscount = total - this.calculateDiscount(discount, total);
+    return this.financial(incomeAfterDiscount)
   }
 
   getTotalIncomeBeforeDiscount(incomes) {
@@ -361,7 +410,32 @@ class Openfrmt {
       total += price * (quantity || 1)
     }
 
-    return total;
+    return this.financial(total);
+  }
+
+  calculateVat({
+    incomes = [],
+    total = 0,
+    vatType = 0
+  }) {
+    // Exampt (VAT Free)
+    if (vatType === 1) {
+      return 0.00;
+    }
+
+    if (vatType === 0) {
+      return this.financial(((total / 100) * this.vatRate));
+    }
+
+    /** TODO: Figure out how to calculate vat per row */
+    // calculate vat per income row and type
+    if (vatType === 2) {
+
+    }
+  }
+  
+  financial(num) {
+    return Number.parseFloat(num).toFixed(2);
   }
 
   async conditonalWritingToBkmStream(condition, settings) {
@@ -380,6 +454,7 @@ class Openfrmt {
     isNumeric,
     withoutPad = false,
     withSign = false,
+    rightPad = false,
     sign = ''
   }) {
     try {
@@ -391,8 +466,20 @@ class Openfrmt {
         text = text.substring(0, maxLength);
       }
 
-      const paddedText = withoutPad ? text : leftpad(text, withSign ? maxLength - 1 : maxLength , isNumeric ? '0' : ' ')
-      await this.bkmFileStream.write(withSign ? `${sign}${paddedText}` : paddedText);
+      // For floating numbers
+      if (text && `${text}`.includes('.')) {
+        text = `${text}`.replace('.', '');
+      }
+
+      if (!withoutPad) {
+        if (rightPad) {
+          text = text.padEnd(text, withSign ? maxLength - 1 : maxLength, isNumeric ? '0' : ' '); 
+        } else {
+          text = leftpad(text, withSign ? maxLength - 1 : maxLength , isNumeric ? '0' : ' ')
+        }
+      }
+
+      await this.bkmFileStream.write(withSign ? `${sign}${text}` : text);
     } catch (error) {
       console.log(error);
     }

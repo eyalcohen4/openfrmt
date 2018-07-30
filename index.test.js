@@ -1,6 +1,7 @@
 const Openfrmt = require('./index');
 const mock = [
   {
+    id: '25fa123',
     creationDate: 1470819922 * 1000,
     type: '300',
     serialNumber: '7712',
@@ -13,16 +14,16 @@ const mock = [
       },
       phone: "0775012340"
     },
-    vatType: 2,
+    vatType: 0,
     income: [
       {
-        price: 300,
+        price: 300.00,
         quantity: 4,
         currency: 'ILS',
         vatType: 1
       },
       {
-        price: 300,
+        price: 300.00,
         quantity: 1,
         currency: 'ILS',
         vatType: 0
@@ -30,6 +31,7 @@ const mock = [
     ]
   },
   {
+    id: 'pqsd123',
     creationDate: 1537524660 * 1000,
     type: '320',
     serialNumber: '22345648912345678113',
@@ -54,7 +56,7 @@ const mock = [
     },
     income: [
       {
-        price: 300,
+        price: 300.00,
         quantity: 2,
         currency: 'ILS',
         vatType: 0
@@ -62,6 +64,7 @@ const mock = [
     ]
   },
   {
+    id: 't891xd',
     creationDate: 1532786504 * 1000,
     item: '',
     price: '',
@@ -74,9 +77,10 @@ const mock = [
       address: {},
       phone: "0526262412"
     },
+    vatType: 1,
     income: [
       {
-        price: 250,
+        price: 250.00,
         quantity: 1,
         currency: 'ILS',
         vatType: 0
