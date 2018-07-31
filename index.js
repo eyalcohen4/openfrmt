@@ -358,12 +358,49 @@ class Openfrmt {
 
       /** 1225 */
       await this.writeToBkmStream({
-        text: invoice.id,
+        text: invoice.patient.id,
         maxLength: 15,
         rightPad: true,
         isNumeric: false,
       });
+
+      await this.writeToBkmStream({
+        text: ' ',
+        maxLength: 10,
+        isNumeric: false,
+      });
+
+      await this.writeToBkmStream({
+        text: invoice.isCancelled ? 1 : 0,
+        maxLength: 1,
+        isNumeric: false,
+      });
+
+      /** 1230 */
+      await this.writeToBkmStream({
+        text: creationDate,
+        maxLength: 8,
+        isNumeric: true,
+      });
+
+      await this.writeToBkmStream({
+        text: ' ',
+        maxLength: 7,
+        isNumeric: false,
+      });
+
+      await this.writeToBkmStream({
+        text: invoice.serialNumber,
+        maxLength: 7,
+        isNumeric: true,
+      });
       
+      await this.writeToBkmStream({
+        text: ' ',
+        maxLength: 60,
+        isNumeric: false,
+      });
+
       // Last Row
       await this.writeToBkmStream({
         text: '\r\n',

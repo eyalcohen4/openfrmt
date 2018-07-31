@@ -7,7 +7,9 @@ const mock = [
     serialNumber: '7712',
     documentDate: '2018-09-02',
     currency: 'ILS',
+    isCancelled: false,
     patient: {
+      id: '60qrasf2',
       name: 'Zigmond Freud',
       address: {
         country: 'Israel'
@@ -37,7 +39,9 @@ const mock = [
     serialNumber: '22345648912345678113',
     documentDate: '2018-01-11',
     currency: 'ILS',
+    isCancelled: false,
     patient: {
+      id: 'a1ed2123',
       name: 'מלאני קליין',
       address: {
         street: 'אלון', 
@@ -72,7 +76,9 @@ const mock = [
     serialNumber: '2234',
     documentDate: '2018-12-12',
     currency: 'ILS',
+    isCancelled: false,
     patient: {
+      id: '60qrasf2',
       name: 'Alice Miller',
       address: {},
       phone: "0526262412"
