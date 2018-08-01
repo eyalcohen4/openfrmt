@@ -116,6 +116,8 @@ class Openfrmt {
       console.count('C100')
       this.C100LinesCount += 1;
       this.currentLine += 1;
+
+      await this.writeD110(this.currentLine, this.invoices[i]);
     }
   }
 
@@ -410,6 +412,38 @@ class Openfrmt {
 
     } catch (error) {
       console.log(error);
+    }
+  }
+
+  async writeD110(currentLine, invoice) {
+    if (!this.bkmFileStream) {
+      throw new Error('[writeD110] No bkmFileStream');
+    }
+
+    const { items } = invoice;
+
+    if (!items || (items && !items.length)) {
+      console.log('[writeD110] No items in invoice');
+      return;
+    }
+
+    try { 
+      await this.writeToBkmStream({
+        text: 'D110',
+        withoutPad: true
+      });
+      await this.writeToBkmStream({
+        text: currentLine,
+        maxLength: 9,
+        isNumeric: true
+      })
+      await this.writeToBkmStream({
+        text: this.company.id,
+        maxLength: 9,
+        isNumeric: true
+      })
+    } catch (error) {
+      console.log(`[writeD100] Error: ${error}`);
     }
   }
 
