@@ -12,7 +12,7 @@ const mock = [
       {
         
       }
-    ]
+    ],
     patient: {
       id: '60qrasf2',
       name: 'Zigmond Freud',
@@ -111,5 +111,10 @@ const company = {
 }
 
 const openfrmt = new Openfrmt('./', software, company, mock);
+
+console.log(`
+  TODO: Better plan and understand what it mean to have an item and an income rows,
+  check: https://www.greeninvoice.co.il/api-docs#/reference/items/add-item/add-item
+`);
 
 console.log(openfrmt.generateBkmFile());
