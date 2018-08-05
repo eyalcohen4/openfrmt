@@ -420,12 +420,14 @@ class Openfrmt {
       throw new Error('[writeD110] No bkmFileStream');
     }
 
-    const { items } = invoice;
+    const { income } = invoice;
 
-    if (!items || (items && !items.length)) {
-      console.log('[writeD110] No items in invoice');
+    if (!income || (income && !income.length)) {
+      console.log('[writeD110] No income rows in invoice');
       return;
     }
+    
+    // Loop & write d110 line for each item
 
     try { 
       await this.writeToBkmStream({
@@ -441,7 +443,18 @@ class Openfrmt {
         text: this.company.id,
         maxLength: 9,
         isNumeric: true
-      })
+      });
+      await this.writeToBkmStream({
+        text: invoice.type,
+        maxLength: 9,
+        isNumeric: true,
+        withoutPad: true
+      });
+      await this.writeToBkmStream({
+        text: invoice.serialNumber,
+        maxLength: 20,
+        isNumeric: true
+      });
     } catch (error) {
       console.log(`[writeD100] Error: ${error}`);
     }

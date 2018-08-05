@@ -8,6 +8,11 @@ const mock = [
     documentDate: '2018-09-02',
     currency: 'ILS',
     isCancelled: false,
+    items: [
+      {
+        
+      }
+    ]
     patient: {
       id: '60qrasf2',
       name: 'Zigmond Freud',
