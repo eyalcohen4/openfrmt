@@ -46,14 +46,18 @@ class Openfrmt {
     this.D120LinesCount = 0;
   }
 
-  async generateBkmFile(companyId, fromDate, toDate) {
+  getFoldersFullPath() {
     const {
       firstFolderName,
       secondFolderName
     } = this.getFilesPath();
-    const foldersPath = `${this.destination}/${firstFolderName}/${secondFolderName}`;
-    const uniqueFileId = this.getUniqueValue();
 
+    return `${this.destination}/${firstFolderName}/${secondFolderName}`;
+  }
+
+  async generateBkmFile(companyId, fromDate, toDate) {
+    const foldersPath = this.getFoldersFullPath();
+    const uniqueFileId = this.getUniqueValue();
     const headerId = 0;
 
     try {
@@ -144,21 +148,21 @@ class Openfrmt {
         text: uniqueFile.toString(),
         maxLength: 15,
         isNumeric: true
-      });;
+      });
       await this.writeToBkmStream({
         text: '&OF1.31&',
         maxLength: 8,
         isNumeric: false
-      });;
+      });
       await this.writeToBkmStream({
         text: '',
         maxLength: 50,
         isNumeric: false
-      });;
+      });
       await this.writeToBkmStream({
         text: '\r\n',
         withoutPad: true
-      });;
+      });
     } catch (error) {
       console.log(`[writeA100] Error: ${error}`);
     }
@@ -185,7 +189,7 @@ class Openfrmt {
         incomes: invoice.incomes, 
         total: incomeAfterDiscount,
         vatType: invoice.vatType
-      });;
+      });
       const totalIncomePlusVat = this.financial(parseInt(incomeAfterDiscount) + parseInt(vat));
 
       const {
@@ -200,159 +204,153 @@ class Openfrmt {
       await this.writeToBkmStream({
         text: 'C100',
         withoutPad: true
-      });;
+      });
       await this.writeToBkmStream({
         text: currentLine,
         maxLength: 9,
         isNumeric: true
-      });;
+      });
       await this.writeToBkmStream({
         text: this.company.id,
         maxLength: 9,
         isNumeric: true,
         withoutPad: true
-      });;
+      });
       await this.writeToBkmStream({
         text: invoice.type,
         maxLength: 9,
         isNumeric: true,
         withoutPad: true
-      });;
+      });
       await this.writeToBkmStream({
         text: invoice.serialNumber,
         maxLength: 20,
         isNumeric: true
-      });;
+      });
       await this.writeToBkmStream({
         text: creationDate,
         maxLength: 8,
         isNumeric: true
-      });;
+      });
       await this.writeToBkmStream({
         text: creationTime,
         maxLength: 4,
         isNumeric: true
-      });;
+      });
       
       /* 1207 */
       await this.writeToBkmStream({
         text: invoice.patient.name,
         maxLength: 50,
         isNumeric: false
-      });;
+      });
 
       this.conditonalWritingToBkmStream(street && street.length, {
         text: street,
         maxLength: 50,
         isNumeric: false
-      });;
+      });
       this.conditonalWritingToBkmStream(houseNumber && houseNumber.length, {
         text: houseNumber,
         maxLength: 10,
         isNumeric: false
-      });;
+      });
       this.conditonalWritingToBkmStream(city && city.length, {
         text: city,
         maxLength: 30,
         isNumeric: false
-      });;
+      });
       this.conditonalWritingToBkmStream(zipCode && zipCode.length, {
         text: zipCode,
         maxLength: 8,
         isNumeric: false
-      });;
+      });
       this.conditonalWritingToBkmStream(country && country.length, {
         text: country,
         maxLength: 30,
         isNumeric: false
-      });;
+      });
       this.conditonalWritingToBkmStream(countryCode && countryCode.length, {
         text: countryCode,
         maxLength: 30,
         isNumeric: false
-      });;
+      });
 
       await this.writeToBkmStream({
         text: invoice.patient.phone,
         maxLength: 15,
         isNumeric: false
-      });;
+      });
       await this.writeToBkmStream({
         text: invoice.patient.id,
         maxLength: 9,
         isNumeric: true
-      });;
+      });
     
       /* 1216 */
       await this.writeToBkmStream({
         text: documentDate,
         maxLength: 8,
         isNumeric: false
-      });;
+      });
 
       // Foreign exchange value - Currently unused.
       await this.writeToBkmStream({
         text: '+00000000000000',
         maxLength: 15,
         isNumeric: true
-      });;
+      });
       await this.writeToBkmStream({
         text: 'ILS',
         maxLength: 3,
         isNumeric: false,
         withoutPad: true
-      });;
+      });
 
       await this.writeToBkmStream({
         text: incomeBeforeDiscount,
         maxLength: 15,
         isNumeric: true,
-        withSign: true,
         sign: '+'
-      });;
+      });
 
       /* 1220 */
       await this.writeToBkmStream({
         text: discountAmount || 0,
         maxLength: 15,
         isNumeric: true,
-        withSign: true,
         sign: discountSign
-      });;
+      });
       
       await this.writeToBkmStream({
         text: incomeAfterDiscount,
         maxLength: 15,
         isNumeric: true,
-        withSign: true,
         sign: '+'
-      });;
+      });
 
       await this.writeToBkmStream({
         text: vat,
         maxLength: 15,
         isNumeric: true,
-        withSign: true,
         sign: '+'
-      });;
+      });
 
       /* 1223 */
       await this.writeToBkmStream({
         text: totalIncomePlusVat,
         maxLength: 15,
         isNumeric: true,
-        withSign: true,
         sign: '+'
-      });;
+      });
 
       
       await this.writeToBkmStream({
         text: '0',
         maxLength: 12,
         isNumeric: true,
-        withSign: true,
         sign: '+'
-      });;
+      });
 
       /* 1225 */
       await this.writeToBkmStream({
@@ -360,50 +358,50 @@ class Openfrmt {
         maxLength: 15,
         rightPad: true,
         isNumeric: false,
-      });;
+      });
 
       await this.writeToBkmStream({
         text: ' ',
         maxLength: 10,
         isNumeric: false,
-      });;
+      });
 
       await this.writeToBkmStream({
         text: invoice.isCancelled ? 1 : 0,
         maxLength: 1,
         isNumeric: false,
-      });;
+      });
 
       /* 1230 */
       await this.writeToBkmStream({
         text: creationDate,
         maxLength: 8,
         isNumeric: true,
-      });;
+      });
 
       await this.writeToBkmStream({
         text: ' ',
         maxLength: 7,
         isNumeric: false,
-      });;
+      });
 
       await this.writeToBkmStream({
         text: invoice.serialNumber,
         maxLength: 7,
         isNumeric: true,
-      });;
+      });
       
       await this.writeToBkmStream({
         text: ' ',
         maxLength: 60,
         isNumeric: false,
-      });;
+      });
 
       // Last Row
       await this.writeToBkmStream({
         text: '\r\n',
         withoutPad: true
-      });;
+      });
 
 
     } catch (error) {
@@ -432,7 +430,7 @@ class Openfrmt {
         await this.writeToBkmStream({
           text: 'D110',
           withoutPad: true
-        });;
+        });
         await this.writeToBkmStream({
           text: currentLine,
           maxLength: 9,
@@ -442,13 +440,13 @@ class Openfrmt {
           text: this.company.id,
           maxLength: 9,
           isNumeric: true
-        });;
+        });
         await this.writeToBkmStream({
           text: invoice.type,
           maxLength: 9,
           isNumeric: true,
           withoutPad: true
-        });;
+        });
 
         /* 1254 */
         await this.writeToBkmStream({
@@ -504,15 +502,53 @@ class Openfrmt {
           maxLength: 20,
           isNumeric: false
         });
-        // const incomeDigitsNumber = currentIncome.quantity && currentIncome.quantity.toString().length || 1;
-        // const quantity = leftpad(currentIncome.quantity, 4 - incomeDigitsNumber, '0');
+        const paddedQuantity = currentIncome.quantity && currentIncome.quantity.toString().padEnd(4, '0');
 
-        // await this.writeToBkmStream({
-        //   text: quantity,
-        //   maxLength: 17,
-        //   isNumeric: true,
-          
-        // });
+        await this.writeToBkmStream({
+          text: paddedQuantity,
+          maxLength: 17,
+          isNumeric: true,
+          sign: '+'
+        });
+
+        await this.writeToBkmStream({
+          text: this.financial(currentIncome.price),
+          maxLength: 15,
+          isNumeric: true,
+          sign: '+'
+        });
+
+        await this.writeToBkmStream({
+          text: '',
+          maxLength: 15,
+          isNumeric: true,
+          sign: '-'
+        });
+
+        await this.writeToBkmStream({
+          text: this.financial(currentIncome.price * currentIncome.quantity) || 0.00,
+          maxLength: 15,
+          isNumeric: true,
+          sign: '+'
+        });
+
+        /* 1268 */
+        await this.writeToBkmStream({
+          text: this.calculateVat({
+            total: currentIncome.price * currentIncome.quantity,
+            vatType: currentIncome.vatType
+          }),
+          maxLength: 15,
+          isNumeric: true,
+          sign: '+'
+        });
+
+        // Last Row
+        await this.writeToBkmStream({
+          text: '\r\n',
+          withoutPad: true
+        });
+
       } catch (error) {
         console.log(`[writeD100] Error: ${error}`);
       }
@@ -600,7 +636,6 @@ class Openfrmt {
     maxLength,
     isNumeric,
     withoutPad = false,
-    withSign = false,
     rightPad = false,
     sign = ''
   }) {
@@ -620,13 +655,13 @@ class Openfrmt {
 
       if (!withoutPad) {
         if (rightPad) {
-          text = text.padEnd(text, withSign ? maxLength - 1 : maxLength, isNumeric ? '0' : ' '); 
+          text = text.padEnd(text, sign ? maxLength - 1 : maxLength, isNumeric ? '0' : ' '); 
         } else {
-          text = leftpad(text, withSign ? maxLength - 1 : maxLength , isNumeric ? '0' : ' ')
+          text = leftpad(text, sign ? maxLength - 1 : maxLength , isNumeric ? '0' : ' ')
         }
       }
 
-      await this.bkmFileStream.write(withSign ? `${sign}${text}` : text);
+      await this.bkmFileStream.write(sign ? `${sign}${text}` : text);
     } catch (error) {
       console.log(error);
     }
@@ -634,8 +669,3 @@ class Openfrmt {
 }
 
 module.exports = Openfrmt;
-
-
-
-
-

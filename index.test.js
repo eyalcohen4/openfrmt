@@ -1,4 +1,6 @@
 const Openfrmt = require('./index');
+const open = require('./open');
+
 const mock = [
   {
     id: '25fa123',
@@ -111,9 +113,8 @@ const company = {
 
 const openfrmt = new Openfrmt('./', software, company, mock);
 
-console.log(`
-  TODO: Better plan and understand what it mean to have an item and an income rows,
-  check: https://www.greeninvoice.co.il/api-docs#/reference/items/add-item/add-item
-`);
-
+const path = openfrmt.getFoldersFullPath();
 console.log(openfrmt.generateBkmFile());
+
+open(`${path}/BKMVDATA.txt`);
+
