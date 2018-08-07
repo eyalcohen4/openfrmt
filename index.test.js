@@ -8,11 +8,6 @@ const mock = [
     documentDate: '2018-09-02',
     currency: 'ILS',
     isCancelled: false,
-    items: [
-      {
-        
-      }
-    ],
     patient: {
       id: '60qrasf2',
       name: 'Zigmond Freud',
@@ -27,13 +22,15 @@ const mock = [
         price: 300.00,
         quantity: 4,
         currency: 'ILS',
-        vatType: 1
+        vatType: 1,
+        description: 'טיפול קליני'
       },
       {
         price: 300.00,
         quantity: 1,
         currency: 'ILS',
-        vatType: 0
+        vatType: 0,
+        description: 'ייעוץ והדרכה',
       }
     ]
   },
@@ -68,7 +65,8 @@ const mock = [
         price: 300.00,
         quantity: 2,
         currency: 'ILS',
-        vatType: 0
+        vatType: 0,
+        description: 'פסיכותרפיה'
       }
     ]
   },
@@ -94,7 +92,8 @@ const mock = [
         price: 250.00,
         quantity: 1,
         currency: 'ILS',
-        vatType: 0
+        vatType: 0,
+        description: 'CBT'
       }
     ]
   }

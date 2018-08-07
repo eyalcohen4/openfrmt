@@ -105,10 +105,6 @@ class Openfrmt {
     }
   }
 
-  getUniqueValue(seed) {
-    return Math.floor((1 + Math.random()) * 1000000000000000)
-  }
-
   async writeInvoicesTitleRow() {
     for (let i = 0; i < this.invoices.length; i++) {
       let itemNumber = 1;
@@ -459,29 +455,64 @@ class Openfrmt {
           text: invoice.serialNumber,
           maxLength: 20,
           isNumeric: true
-        });;
+        });
         await this.writeToBkmStream({
           text: index,
           maxLength: 4,
           isNumeric: true
         });
         await this.writeToBkmStream({
-          text: ' ',
+          text: '',
           maxLength: 3,
           isNumeric: true
         });
         await this.writeToBkmStream({
-          text: ' ',
+          text: '',
           maxLength: 20,
           isNumeric: true
+        });
+        await this.writeToBkmStream({
+          text: 1,
+          maxLength: 1,
+          isNumeric: true
+        });
+
+        await this.writeToBkmStream({
+          text: '',
+          maxLength: 20,
+          isNumeric: false
         });
 
         /* 1260 */
         await this.writeToBkmStream({
           text: currentIncome.description,
           maxLength: 30,
-          isNumeric: true
+          isNumeric: false
         });
+        await this.writeToBkmStream({
+          text: '',
+          maxLength: 50,
+          isNumeric: false
+        });
+        await this.writeToBkmStream({
+          text: '',
+          maxLength: 30,
+          isNumeric: false
+        });
+        await this.writeToBkmStream({
+          text: 'יחידה',
+          maxLength: 20,
+          isNumeric: false
+        });
+        // const incomeDigitsNumber = currentIncome.quantity && currentIncome.quantity.toString().length || 1;
+        // const quantity = leftpad(currentIncome.quantity, 4 - incomeDigitsNumber, '0');
+
+        // await this.writeToBkmStream({
+        //   text: quantity,
+        //   maxLength: 17,
+        //   isNumeric: true,
+          
+        // });
       } catch (error) {
         console.log(`[writeD100] Error: ${error}`);
       }
@@ -499,6 +530,10 @@ class Openfrmt {
 
     // Fixed Value
     return this.financial(discount.amount);
+  }
+
+  getUniqueValue(seed) {
+    return Math.floor((1 + Math.random()) * 1000000000000000)
   }
 
   calculateIncomeAfterDiscount(discount, total) {
@@ -570,7 +605,7 @@ class Openfrmt {
     sign = ''
   }) {
     try {
-      if (text == null) {
+      if (text === null) {
         text = '';
       }
 
@@ -599,6 +634,8 @@ class Openfrmt {
 }
 
 module.exports = Openfrmt;
+
+
 
 
 
