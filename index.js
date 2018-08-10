@@ -68,7 +68,7 @@ class Openfrmt {
 
       this.currentLine += 1;
 
-      await this.writeInvoicesTitleRow();
+      await this.writeInvoicesRows();
     } catch (error) {
 
     }
@@ -109,15 +109,28 @@ class Openfrmt {
     }
   }
 
-  async writeInvoicesTitleRow() {
-    for (let i = 0; i < this.invoices.length; i++) {
-      let itemNumber = 1;
-      await this.writeC100(this.currentLine, this.invoices[i]);
-      console.count('C100')
-      this.C100LinesCount += 1;
-      this.currentLine += 1;
+  async writeInvoicesRows() {
+    try { 
+      const invoicesBKMVMetaData = [];
 
-      await this.writeD110(this.currentLine, this.invoices[i]);
+      for (let i = 0; i < this.invoices.length; i++) {
+        await this.writeC100(this.currentLine, this.invoices[i]);
+        console.count('C100')
+        this.C100LinesCount += 1;
+        this.currentLine += 1;
+
+        const d110LinesCount = await this.writeD110(this.currentLine, this.invoices[i]);
+        const d120LinesCount = await this.writeD120(this.currentLine, this.invoices[i]);
+
+        invoicesBKMVMetaData[i] = {
+          d110LinesCount,
+          d120LinesCount
+        };
+      }
+
+      console.log(invoicesBKMVMetaData)
+    } catch (error) {
+      console.log(error);
     }
   }
 
@@ -415,16 +428,19 @@ class Openfrmt {
     }
 
     const { income } = invoice;
+    let linesCount = 0;
 
     if (!income || (income && !income.length)) {
       console.log('[writeD110] No income rows in invoice');
-      return;
+      return 0;
     }
 
     
     for (let index = 0; index < income.length; index++) {
       // Loop & write d110 line for each item
       const currentIncome = income[index];
+      const paddedQuantity = currentIncome.quantity && currentIncome.quantity.toString().padEnd(4, '0');
+      const documentDate = invoice.documentDate ? dayjs(invoice.documentDate).format("YYYYMMDD") : '';
 
       try { 
         await this.writeToBkmStream({
@@ -502,7 +518,6 @@ class Openfrmt {
           maxLength: 20,
           isNumeric: false
         });
-        const paddedQuantity = currentIncome.quantity && currentIncome.quantity.toString().padEnd(4, '0');
 
         await this.writeToBkmStream({
           text: paddedQuantity,
@@ -525,22 +540,37 @@ class Openfrmt {
           sign: '-'
         });
 
+        /** 1267 */
         await this.writeToBkmStream({
           text: this.financial(currentIncome.price * currentIncome.quantity) || 0.00,
           maxLength: 15,
           isNumeric: true,
           sign: '+'
         });
-
-        /* 1268 */
         await this.writeToBkmStream({
-          text: this.calculateVat({
-            total: currentIncome.price * currentIncome.quantity,
-            vatType: currentIncome.vatType
-          }),
-          maxLength: 15,
+          text: this.financial(this.vatRate),
+          maxLength: 5,
           isNumeric: true,
-          sign: '+'
+        });
+        await this.writeToBkmStream({
+          text: '',
+          maxLength: 7,
+          isNumeric: false,
+        });
+        await this.writeToBkmStream({
+          text: documentDate,
+          maxLength: 8,
+          isNumeric: true,
+        });
+        await this.writeToBkmStream({
+          text: invoice.serialNumber,
+          maxLength: 7,
+          isNumeric: true,
+        });
+        await this.writeToBkmStream({
+          text: '',
+          maxLength: 21,
+          isNumeric: false,
         });
 
         // Last Row
@@ -549,10 +579,165 @@ class Openfrmt {
           withoutPad: true
         });
 
+        linesCount += 1;
       } catch (error) {
         console.log(`[writeD100] Error: ${error}`);
       }
     }
+
+    return linesCount;
+  }
+
+  async writeD120(currentLine, invoice) {
+    if (!this.bkmFileStream) {
+      throw new Error('[writeD120] No bkmFileStream');
+    }
+
+    const { payment } = invoice;
+    let linesCount = 0;
+
+    if (!payment || (payment && !payment.length)) {
+      console.log('[writeD120] No payment rows in invoice');
+      return 0;
+    }
+
+    
+    for (let index = 0; index < payment.length; index++) {
+      // Loop & write d120 line for each paymnet
+
+      const currentPayment = payment[index];
+      const documentDate = invoice.documentDate ? dayjs(invoice.documentDate).format("YYYYMMDD") : '';
+      const paymentDate = currentPayment.date ? dayjs(currentPayment.date).format("YYYYMMDD") : '';
+
+      try { 
+        await this.writeToBkmStream({
+          text: 'D120',
+          withoutPad: true
+        });
+        await this.writeToBkmStream({
+          text: currentLine,
+          maxLength: 9,
+          isNumeric: true
+        });
+        await this.writeToBkmStream({
+          text: this.company.id,
+          maxLength: 9,
+          isNumeric: true
+        });
+        await this.writeToBkmStream({
+          text: invoice.type,
+          maxLength: 9,
+          isNumeric: true,
+          withoutPad: true
+        });
+        await this.writeToBkmStream({
+          text: invoice.serialNumber,
+          maxLength: 20,
+          isNumeric: true
+        });
+        await this.writeToBkmStream({
+          text: index,
+          maxLength: 4,
+          isNumeric: true
+        });
+        /** 1303 */
+        await this.writeToBkmStream({
+          text: currentPayment.type,
+          maxLength: 1,
+          isNumeric: true
+        });
+
+        if (currentPayment.type === 2) {
+          await this.writeToBkmStream({
+            text: currentPayment.bankNumber,
+            maxLength: 10,
+            isNumeric: true
+          });
+          await this.writeToBkmStream({
+            text: currentPayment.bankBranch,
+            maxLength: 10,
+            isNumeric: true
+          });
+          await this.writeToBkmStream({
+            text: currentPayment.bankAccount,
+            maxLength: 15,
+            isNumeric: true
+          });
+          await this.writeToBkmStream({
+            text: currentPayment.chequeNum,
+            maxLength: 10,
+            isNumeric: true
+          });
+        }
+
+        if (currentPayment.type === 2 || currentPayment.type === 3) {
+          await this.writeToBkmStream({
+            text: paymentDate,
+            maxLength: 8,
+            isNumeric: true
+          });
+        }
+
+        /* 1312 */
+        await this.writeToBkmStream({
+          text: this.financial(currentPayment.price),
+          maxLength: 15,
+          isNumeric: true,
+          sign: '+'
+        });
+
+        if (currentPayment.type === 3) {
+          await this.writeToBkmStream({
+            text: currentPayment.cardType,
+            maxLength: 1,
+            isNumeric: true
+          });
+          await this.writeToBkmStream({
+            text: '',
+            maxLength: 20,
+            isNumeric: false
+          })
+          await this.writeToBkmStream({
+            text: currentPayment.dealType,
+            maxLength: 1,
+            isNumeric: true
+          })
+        }
+
+        await this.writeToBkmStream({
+          text: '',
+          maxLength: 7,
+          isNumeric: false
+        });
+        await this.writeToBkmStream({
+          text: documentDate,
+          maxLength: 8,
+          isNumeric: true
+        });
+        await this.writeToBkmStream({
+          text: invoice.serialNumber,
+          maxLength: 7,
+          isNumeric: true
+        });
+        await this.writeToBkmStream({
+          text: '',
+          maxLength: 60,
+          isNumeric: false
+        });
+
+        // Last Row
+        await this.writeToBkmStream({
+          text: '\r\n',
+          withoutPad: true
+        });
+
+        linesCount += 1;
+      } catch (error) {
+        console.log(`[writeD120] Error: ${error}`);
+      }
+    }
+
+    return linesCount;
   }
 
   calculateDiscount(discount, total) {
@@ -613,7 +798,8 @@ class Openfrmt {
     /* TODO: Figure out how to calculate vat per row */
     // calculate vat per income row and type
     if (vatType === 2) {
-
+      const vatToPercent = ((parseFloat(this.vatRate) + 100) / 100);
+      return total - (total - (total / vatToPercent));
     }
   }
   

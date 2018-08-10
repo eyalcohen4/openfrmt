@@ -19,6 +19,27 @@ const mock = [
       phone: "0775012340"
     },
     vatType: 0,
+    payment: [
+      {
+        date: '2018-09-01',
+        type: 4,
+        price: 1200,
+        currency: "ILS",
+        bankName: 'Mizrahi Tefahot',
+        bankNumber: 20,
+        bankAccount: '201911',
+        bankBranch: '420',
+      },
+      {
+        date: '2018-01-10',
+        type: 3,
+        price: 300,
+        currency: "ILS",
+        cardType: 2,
+        cardNum: '1234',
+        dealType: 1,
+      },
+    ],
     income: [
       {
         price: 300.00,
@@ -62,6 +83,19 @@ const mock = [
       amount: 20,
       type: 'percentage'
     },
+    payment: [
+      {
+        date: '2018-01-10',
+        type: 2,
+        price: 600,
+        currency: "ILS",
+        bankName: 'Mizrahi Tefahot',
+        bankNumber: 20,
+        bankAccount: '201911',
+        bankBranch: '420',
+        chequeNum: '9102932',
+      },
+    ],
     income: [
       {
         price: 300.00,
@@ -89,6 +123,14 @@ const mock = [
       phone: "0526262412"
     },
     vatType: 1,
+    payment: [
+      {
+        date: '2018-11-25',
+        currency: 'ILS',
+        type: 1,
+        price: 300
+      }
+    ],
     income: [
       {
         price: 250.00,
