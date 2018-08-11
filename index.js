@@ -65,10 +65,10 @@ class Openfrmt {
       await this.createStreams(foldersPath);
 
       await this.writeA100(uniqueFileId, this.currentLine, this.company);
-
       this.currentLine += 1;
-
       await this.writeInvoicesRows();
+
+      await this.writeZ900(uniqueFileId, this.currentLine, this.company);
     } catch (error) {
 
     }
@@ -166,6 +166,57 @@ class Openfrmt {
         text: '&OF1.31&',
         maxLength: 8,
         isNumeric: false
+      });
+      await this.writeToBkmStream({
+        text: '',
+        maxLength: 50,
+        isNumeric: false
+      });
+      await this.writeToBkmStream({
+        text: '\r\n',
+        withoutPad: true
+      });
+    } catch (error) {
+      console.log(`[writeA100] Error: ${error}`);
+    }
+  }
+
+  async writeZ900(uniqueFile, currentLine, company) {
+    if (!this.bkmFileStream) {
+      throw new Error('[writeZ900] No bkmFileStream')
+    }
+
+    try {
+      await this.writeToBkmStream({
+        text: 'Z900',
+        maxLength: 4,
+        isNumeric: false
+      });
+      await this.writeToBkmStream({
+        text: currentLine,
+        maxLength: 9,
+        isNumeric: true
+      });
+      await this.writeToBkmStream({
+        text: company.id,
+        maxLength: 9,
+        isNumeric: true
+      });
+      await this.writeToBkmStream({
+        text: uniqueFile.toString(),
+        maxLength: 15,
+        isNumeric: true
+      });
+      await this.writeToBkmStream({
+        text: '&OF1.31&',
+        maxLength: 8,
+        isNumeric: false,
+        ignoreDot: true,
+      });
+      await this.writeToBkmStream({
+        text: currentLine,
+        maxLength: 15,
+        isNumeric: true
       });
       await this.writeToBkmStream({
         text: '',
@@ -580,6 +631,7 @@ class Openfrmt {
         });
 
         linesCount += 1;
+        this.currentLine += 1;
       } catch (error) {
         console.log(`[writeD100] Error: ${error}`);
       }
@@ -732,6 +784,7 @@ class Openfrmt {
         });
 
         linesCount += 1;
+        this.currentLine += 1;
       } catch (error) {
         console.log(`[writeD120] Error: ${error}`);
       }
@@ -823,6 +876,7 @@ class Openfrmt {
     isNumeric,
     withoutPad = false,
     rightPad = false,
+    ignoreDot = false,
     sign = ''
   }) {
     try {
@@ -830,12 +884,12 @@ class Openfrmt {
         text = '';
       }
 
-      if (!withoutPad && text.length > maxLength) {
+      if (!withoutPad && text && text.length > maxLength) {
         text = text.substring(0, maxLength);
       }
 
       // For floating numbers
-      if (text && `${text}`.includes('.')) {
+      if (!ignoreDot && text && `${text}`.includes('.')) {
         text = `${text}`.replace('.', '');
       }
 
