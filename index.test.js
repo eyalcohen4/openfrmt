@@ -141,22 +141,42 @@ const mock = [
       }
     ]
   }
-]
-
+];
 const software = {
   name: 'Betty',
   version: '0.0.1',
-  id: '123'
+  id: '123',
+  registrationNumber: '123456',
+  mutliyear: true,
+}
+const user = {
+  companyId: '12345678',
+  name: 'Eyal Cohen',
+  address: {
+    street: 'ארלוזורוב',
+    houseNumber: '25',
+    city: 'תל אביב',
+    zipCode: '6248802',
+  }
 }
 const company = {
   name: 'Some Psychologist',
-  id: '12345678'
+  id: '12345678',
+  registrationNumber: '9346',
 }
 
-const openfrmt = new Openfrmt('./', software, company, mock);
+console.log(user);
+const openfrmt = new Openfrmt({
+  destination: './', 
+  software, 
+  company, 
+  company, 
+  invoices: mock, 
+  user
+});
 
 const path = openfrmt.getFoldersFullPath();
-console.log(openfrmt.generateBkmFile());
+console.log(openfrmt.generateReport());
 
-open(`${path}/BKMVDATA.txt`);
+open(`${path}/INI.txt`);
 

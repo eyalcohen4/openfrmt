@@ -22,30 +22,52 @@ class Openfrmt {
    * @param {Software} software 
    * @param {Company} company 
    */
-  constructor(destination, software, company, invoices) {
+  constructor({
+    destination, 
+    software, 
+    company, 
+    invoices, 
+    user
+  }) {
     this.invoices = invoices;
     this.destination = destination || '';
+    this.user = user;
+    this.software = software;
+    this.company = company;
+    
     this.vatRate = 17;
-    this.software = {
-      name: software.name,
-      version: software.version,
-      id: software.id
-    }
-    this.company = {
-      name: company.name,
-      id: company.id
-    }
 
     this.bkmFileStream = null;
     this.iniFileStream = null;
 
     this.currentFile = 0;
-    this.currentLine = 1;
+    this.currentBkmvFileLine = 1;
     this.C100LinesCount = 0;
     this.D110LinesCount = 0;
     this.D120LinesCount = 0;
   }
 
+  async generateReport(companyId, fromDate, toDate) {
+    this.foldersPath = this.getFoldersFullPath();
+    
+    const uniqueFileId = this.getUniqueValue();
+    const headerId = 0;
+
+    try {
+      await this.createFolders(this.foldersPath);
+      await this.createStreams(this.foldersPath);
+
+      await this.writeA100(uniqueFileId, this.currentBkmvFileLine, this.user);
+      this.currentBkmvFileLine += 1;
+      await this.writeInvoicesRows();
+      await this.writeZ900(uniqueFileId, this.currentBkmvFileLine, this.user);
+
+      await this.writeIniFile(uniqueFileId);
+    } catch (error) {
+
+    }
+  }
+  
   getFoldersFullPath() {
     const {
       firstFolderName,
@@ -55,40 +77,30 @@ class Openfrmt {
     return `${this.destination}/${firstFolderName}/${secondFolderName}`;
   }
 
-  async generateBkmFile(companyId, fromDate, toDate) {
-    const foldersPath = this.getFoldersFullPath();
-    const uniqueFileId = this.getUniqueValue();
-    const headerId = 0;
-
-    try {
-      await this.createFolders(foldersPath);
-      await this.createStreams(foldersPath);
-
-      await this.writeA100(uniqueFileId, this.currentLine, this.company);
-      this.currentLine += 1;
-      await this.writeInvoicesRows();
-
-      await this.writeZ900(uniqueFileId, this.currentLine, this.company);
-    } catch (error) {
-
-    }
-  }
-
   createStreams(foldersPath) {
     this.bkmFileStream = fs.createWriteStream(path.resolve(__dirname, foldersPath, 'BKMVDATA.txt'));
     this.iniFileStream = fs.createWriteStream(path.resolve(__dirname, foldersPath, 'INI.txt'));
   }
 
   getFilesPath() {
-    const companyId = this.company.id.substring(0, 8);
+    console.log(this.user);
+    const companyId = this.user.companyId.substring(0, 8);
     const year = new Date().getFullYear().toString().substring(2, 4);
-    const firstFolderName = `${this.company.id}.${year}`;
+    const firstFolderName = `${companyId}.${year}`;
     const secondFolderName = dayjs().format('MMDDhhmm');
 
     return {
       firstFolderName,
       secondFolderName
     };
+  }
+
+  async writeIniFile(uniqueFileId) {
+    try {
+      await this.writeA000(uniqueFileId, this.foldersPath)
+    } catch (error) {
+      console.log(`[writeIniFile] Error: ${error}`);
+    }
   }
 
   async createFolder(folderPath) {
@@ -102,7 +114,7 @@ class Openfrmt {
   }
 
   async createFolders(paths) {
-    const parts = paths.split(path.sep)
+    const parts = paths.split(path.sep);
 
     for (let i = 1; i <= parts.length; i++) {
       this.createFolder(path.join.apply(null, parts.slice(0, i)))
@@ -114,13 +126,12 @@ class Openfrmt {
       const invoicesBKMVMetaData = [];
 
       for (let i = 0; i < this.invoices.length; i++) {
-        await this.writeC100(this.currentLine, this.invoices[i]);
-        console.count('C100')
+        await this.writeC100(this.currentBkmvFileLine, this.invoices[i]);
         this.C100LinesCount += 1;
-        this.currentLine += 1;
+        this.currentBkmvFileLine += 1;
 
-        const d110LinesCount = await this.writeD110(this.currentLine, this.invoices[i]);
-        const d120LinesCount = await this.writeD120(this.currentLine, this.invoices[i]);
+        const d110LinesCount = await this.writeD110(this.currentBkmvFileLine, this.invoices[i]);
+        const d120LinesCount = await this.writeD120(this.currentBkmvFileLine, this.invoices[i]);
 
         invoicesBKMVMetaData[i] = {
           d110LinesCount,
@@ -131,6 +142,147 @@ class Openfrmt {
       console.log(invoicesBKMVMetaData)
     } catch (error) {
       console.log(error);
+    }
+  }
+
+  async writeA000(uniqueFile, foldersPath) {
+
+    if (!this.iniFileStream) {
+      throw new Error('[writeA000] No iniFileStream');
+    }
+
+    const {
+      street,
+      houseNumber,
+      city,
+      zipCode
+    } = this.user.address;
+
+    try {
+      await this.writeToIniStream({
+        text: 'A000',
+        maxLength: 4,
+        isNumeric: false
+      });
+      await this.writeToIniStream({
+        text: '',
+        maxLength: 5,
+        isNumeric: false
+      });
+      await this.writeToIniStream({
+        text: this.currentBkmvFileLine,
+        maxLength: 15,
+        isNumeric: true
+      });
+      await this.writeToIniStream({
+        text: this.company.registrationNumber,
+        maxLength: 9,
+        isNumeric: true
+      });
+      await this.writeToIniStream({
+        text: uniqueFile.toString(),
+        maxLength: 15,
+        isNumeric: true
+      });
+      await this.writeToIniStream({
+        text: '&OF1.31&',
+        maxLength: 8,
+        isNumeric: false,
+        ignoreDot: true
+      });
+      /** 1006 */
+      await this.writeToIniStream({
+        text: this.software.registrationNumber,
+        maxLength: 8,
+        isNumeric: true
+      });
+      await this.writeToIniStream({
+        text: this.software.name,
+        maxLength: 20,
+        isNumeric: false
+      });
+      await this.writeToIniStream({
+        text: this.software.version,
+        maxLength: 20,
+        isNumeric: false,
+        ignoreDot: true
+      });
+      await this.writeToIniStream({
+        text: this.company.registrationNumber,
+        maxLength: 9,
+        isNumeric: true
+      });
+      await this.writeToIniStream({
+        text: this.company.name,
+        maxLength: 20,
+        isNumeric: false
+      });
+      await this.writeToIniStream({
+        text: this.software.multyear ? 2 : 1,
+        maxLength: 1,
+        isNumeric: true
+      });
+      await this.writeToIniStream({
+        text: foldersPath,
+        maxLength: 50,
+        isNumeric: false
+      });
+      await this.writeToIniStream({
+        text: 0,
+        maxLength: 1,
+        isNumeric: true
+      });
+      await this.writeToIniStream({
+        text: 0,
+        maxLength: 1,
+        isNumeric: true
+      });
+      /** 1015 */
+      await this.writeToIniStream({
+        text: this.company.id,
+        maxLength: 9,
+        isNumeric: true
+      });
+      await this.writeToIniStream({
+        text: '',
+        maxLength: 10,
+        isNumeric: false
+      });
+
+      await this.writeToIniStream({
+        text: this.user.name,
+        maxLength: 10,
+        isNumeric: false
+      });
+
+      this.conditionalWritingToIniStream(street && street.length, {
+        text: street,
+        maxLength: 50,
+        isNumeric: false
+      });
+      this.conditionalWritingToIniStream(houseNumber && houseNumber.length, {
+        text: houseNumber,
+        maxLength: 10,
+        isNumeric: false
+      });
+      this.conditionalWritingToIniStream(city && city.length, {
+        text: city,
+        maxLength: 30,
+        isNumeric: false
+      });
+      this.conditionalWritingToIniStream(zipCode && zipCode.length, {
+        text: zipCode,
+        maxLength: 8,
+        isNumeric: false
+      });
+      
+      
+      await this.writeToIniStream({
+        text: '\r\n',
+        withoutPad: true
+      });
+    } catch (error) {
+      console.log(`[writeA000] Error: ${error}`);
     }
   }
 
@@ -153,7 +305,7 @@ class Openfrmt {
         isNumeric: true
       });
       await this.writeToBkmStream({
-        text: company.id,
+        text: this.user.companyId,
         maxLength: 9,
         isNumeric: true
       });
@@ -165,7 +317,8 @@ class Openfrmt {
       await this.writeToBkmStream({
         text: '&OF1.31&',
         maxLength: 8,
-        isNumeric: false
+        isNumeric: false,
+        ignoreDot: true
       });
       await this.writeToBkmStream({
         text: '',
@@ -181,7 +334,7 @@ class Openfrmt {
     }
   }
 
-  async writeZ900(uniqueFile, currentLine, company) {
+  async writeZ900(uniqueFile, currentLine) {
     if (!this.bkmFileStream) {
       throw new Error('[writeZ900] No bkmFileStream')
     }
@@ -198,7 +351,7 @@ class Openfrmt {
         isNumeric: true
       });
       await this.writeToBkmStream({
-        text: company.id,
+        text: this.user.companyId,
         maxLength: 9,
         isNumeric: true
       });
@@ -275,7 +428,7 @@ class Openfrmt {
         isNumeric: true
       });
       await this.writeToBkmStream({
-        text: this.company.id,
+        text: this.user.companyId,
         maxLength: 9,
         isNumeric: true,
         withoutPad: true
@@ -504,7 +657,7 @@ class Openfrmt {
           isNumeric: true
         });
         await this.writeToBkmStream({
-          text: this.company.id,
+          text: this.user.companyId,
           maxLength: 9,
           isNumeric: true
         });
@@ -631,7 +784,7 @@ class Openfrmt {
         });
 
         linesCount += 1;
-        this.currentLine += 1;
+        this.currentBkmvFileLine += 1;
       } catch (error) {
         console.log(`[writeD100] Error: ${error}`);
       }
@@ -672,7 +825,7 @@ class Openfrmt {
           isNumeric: true
         });
         await this.writeToBkmStream({
-          text: this.company.id,
+          text: this.user.companyId,
           maxLength: 9,
           isNumeric: true
         });
@@ -784,7 +937,7 @@ class Openfrmt {
         });
 
         linesCount += 1;
-        this.currentLine += 1;
+        this.currentBkmvFileLine += 1;
       } catch (error) {
         console.log(`[writeD120] Error: ${error}`);
       }
@@ -870,6 +1023,16 @@ class Openfrmt {
     }
   }
 
+  async conditionalWritingToIniStream(condition, settings) {
+    try {
+      if (condition) {
+        await this.writeToIniStream(settings);
+      }
+    } catch (error) {
+      console.log(`[conditionalWritingToIniStream] Error: ${error}`)
+    }
+  }
+
   async writeToBkmStream({
     text,
     maxLength,
@@ -902,6 +1065,43 @@ class Openfrmt {
       }
 
       await this.bkmFileStream.write(sign ? `${sign}${text}` : text);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async writeToIniStream({
+    text,
+    maxLength,
+    isNumeric,
+    withoutPad = false,
+    rightPad = false,
+    ignoreDot = false,
+    sign = ''
+  }) {
+    try {
+      if (text === null) {
+        text = '';
+      }
+
+      if (!withoutPad && text && text.length > maxLength) {
+        text = text.substring(0, maxLength);
+      }
+
+      // For floating numbers
+      if (!ignoreDot && text && `${text}`.includes('.')) {
+        text = `${text}`.replace('.', '');
+      }
+
+      if (!withoutPad) {
+        if (rightPad) {
+          text = text.padEnd(text, sign ? maxLength - 1 : maxLength, isNumeric ? '0' : ' '); 
+        } else {
+          text = leftpad(text, sign ? maxLength - 1 : maxLength , isNumeric ? '0' : ' ')
+        }
+      }
+
+      await this.iniFileStream.write(sign ? `${sign}${text}` : text);
     } catch (error) {
       console.log(error);
     }
