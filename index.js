@@ -112,6 +112,7 @@ class Openfrmt {
     try {
       console.log('TODO: Finish A000, Write rows summary');
       await this.writeA000(uniqueFileId, this.foldersPath)
+      await this.writeIniRowsSummaries(rows);
       console.log(rows);
       console.timeEnd();
     } catch (error) {
@@ -150,12 +151,70 @@ class Openfrmt {
         const d120LinesCount = await this.writeD120(this.currentBkmvFileLine, this.invoices[i]);
 
         invoicesBKMVMetaData[i] = {
-          d110LinesCount,
-          d120LinesCount
+          D110: d110LinesCount,
+          D120: d120LinesCount
         };
       }
 
       return invoicesBKMVMetaData;
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async writeIniRowsSummaries(rows) {
+    try {
+      if (!rows || rows && !rows.length) {
+        console.log('[writeIniRowsSummaries] No Rows');
+        return; 
+      }
+
+      const d110Total = rows.reduce((prev, curr) => prev + curr['D110'], 0);
+      const d120Total = rows.reduce((prev, curr) => prev + curr['D120'], 0);
+      
+      await this.writeToIniStream({
+        text: 'C100',
+        maxLength: 4,
+        isNumeric: false
+      });
+      
+      await this.writeToIniStream({
+        text: this.C100LinesCount,
+        maxLength: 15,
+        isNumeric: true
+      });
+      await this.writeToIniStream({
+        text: '\r\n',
+        withoutPad: true
+      });
+      await this.writeToIniStream({
+        text: 'D110',
+        maxLength: 4,
+        isNumeric: false
+      });
+      await this.writeToIniStream({
+        text: d110Total,
+        maxLength: 15,
+        isNumeric: true
+      });
+      await this.writeToIniStream({
+        text: '\r\n',
+        withoutPad: true
+      });
+      await this.writeToIniStream({
+        text: 'D120',
+        maxLength: 4,
+        isNumeric: false
+      });
+      await this.writeToIniStream({
+        text: d120Total,
+        maxLength: 15,
+        isNumeric: true
+      });
+      await this.writeToIniStream({
+        text: '\r\n',
+        withoutPad: true
+      });
     } catch (error) {
       console.log(error);
     }
@@ -172,8 +231,10 @@ class Openfrmt {
       city,
       zipCode
     } = this.user.address;
-    const startDate = this.dates && this.dates.start ? dayjs(this.dates.start).format("YYYYMMDD") : '';
-    const endDate = this.dates && this.dates.end ? dayjs(this.dates.end).format("YYYYMMDD") : '';
+    const fromDate = this.dates && this.dates.fromDate ? dayjs(this.dates.fromDate).format("YYYYMMDD") : '';
+    const toDate = this.dates && this.dates.toDate ? dayjs(this.dates.toDate).format("YYYYMMDD") : '';
+    const processStartDate = this.dates && this.dates.processStartDate ? dayjs(this.dates.processStartDate).format("YYYYMMDD") : '';
+    const processStartHour = this.dates && this.dates.processStartDate ? dayjs(this.dates.processStartDate).format("HHmm") : '';
 
     try {
       await this.writeToIniStream({
@@ -256,7 +317,12 @@ class Openfrmt {
       });
       /** 1015 */
       await this.writeToIniStream({
-        text: this.company.id,
+        text: this.user.companyId,
+        maxLength: 9,
+        isNumeric: true
+      });
+      await this.writeToIniStream({
+        text: '',
         maxLength: 9,
         isNumeric: true
       });
@@ -268,39 +334,55 @@ class Openfrmt {
 
       await this.writeToIniStream({
         text: this.user.name,
-        maxLength: 10,
-        isNumeric: false
-      });
-
-      this.conditionalWritingToIniStream(street && street.length, {
-        text: street,
         maxLength: 50,
         isNumeric: false
       });
-      this.conditionalWritingToIniStream(houseNumber && houseNumber.length, {
-        text: houseNumber,
+
+      await this.writeToIniStream({
+        text: street || '',
+        maxLength: 50,
+        isNumeric: false
+      });
+      await this.writeToIniStream({
+        text: houseNumber || '',
         maxLength: 10,
         isNumeric: false
       });
-      this.conditionalWritingToIniStream(city && city.length, {
-        text: city,
+      await this.writeToIniStream({
+        text: city || '',
         maxLength: 30,
         isNumeric: false
       });
-      this.conditionalWritingToIniStream(zipCode && zipCode.length, {
-        text: zipCode,
+      await this.writeToIniStream({
+        text: zipCode || '',
         maxLength: 8,
         isNumeric: false
       });
-      
+
       await this.writeToIniStream({
-        text: startDate,
+        text: dayjs().format('YYYY'),
+        maxLength: 4,
+        isNumeric: true
+      });
+
+      await this.writeToIniStream({
+        text: fromDate,
         maxLength: 8,
         isNumeric: true
       });
       await this.writeToIniStream({
-        text: endDate,
+        text: toDate,
         maxLength: 8,
+        isNumeric: true
+      });
+      await this.writeToIniStream({
+        text: processStartDate,
+        maxLength: 8,
+        isNumeric: true
+      });
+      await this.writeToIniStream({
+        text: processStartHour,
+        maxLength: 4,
         isNumeric: true
       });
       await this.writeToIniStream({
@@ -321,7 +403,7 @@ class Openfrmt {
       });
       await this.writeToIniStream({
         text: 'ILS',
-        maxLength: 20,
+        maxLength: 3,
         isNumeric: false
       });
       await this.writeToIniStream({
@@ -500,7 +582,7 @@ class Openfrmt {
       await this.writeToBkmStream({
         text: invoice.serialNumber,
         maxLength: 20,
-        isNumeric: true
+        isNumeric: false
       });
       await this.writeToBkmStream({
         text: creationDate,
@@ -520,34 +602,35 @@ class Openfrmt {
         isNumeric: false
       });
 
-      this.conditonalWritingToBkmStream(street && street.length, {
-        text: street,
+      
+      await this.writeToBkmStream({
+        text: street || '',
         maxLength: 50,
         isNumeric: false
       });
-      this.conditonalWritingToBkmStream(houseNumber && houseNumber.length, {
-        text: houseNumber,
+      await this.writeToBkmStream({
+        text: houseNumber || '',
         maxLength: 10,
         isNumeric: false
       });
-      this.conditonalWritingToBkmStream(city && city.length, {
-        text: city,
+      await this.writeToBkmStream({
+        text: city || '',
         maxLength: 30,
         isNumeric: false
       });
-      this.conditonalWritingToBkmStream(zipCode && zipCode.length, {
-        text: zipCode,
+      await this.writeToBkmStream({
+        text: zipCode || '',
         maxLength: 8,
         isNumeric: false
       });
-      this.conditonalWritingToBkmStream(country && country.length, {
-        text: country,
+      await this.writeToBkmStream({
+        text: country || '',
         maxLength: 30,
         isNumeric: false
       });
-      this.conditonalWritingToBkmStream(countryCode && countryCode.length, {
-        text: countryCode,
-        maxLength: 30,
+      await this.writeToBkmStream({
+        text: countryCode || '',
+        maxLength: 2,
         isNumeric: false
       });
 
@@ -557,7 +640,7 @@ class Openfrmt {
         isNumeric: false
       });
       await this.writeToBkmStream({
-        text: invoice.patient.id,
+        text: invoice.patient.authorizedId || '',
         maxLength: 9,
         isNumeric: true
       });
@@ -566,14 +649,13 @@ class Openfrmt {
       await this.writeToBkmStream({
         text: documentDate,
         maxLength: 8,
-        isNumeric: false
+        isNumeric: true
       });
 
-      // Foreign exchange value - Currently unused.
       await this.writeToBkmStream({
-        text: '+00000000000000',
+        text: '',
         maxLength: 15,
-        isNumeric: true
+        isNumeric: false,
       });
       await this.writeToBkmStream({
         text: 'ILS',
@@ -631,12 +713,11 @@ class Openfrmt {
       await this.writeToBkmStream({
         text: invoice.patient.id,
         maxLength: 15,
-        rightPad: true,
         isNumeric: false,
       });
 
       await this.writeToBkmStream({
-        text: ' ',
+        text: '',
         maxLength: 10,
         isNumeric: false,
       });
@@ -649,7 +730,7 @@ class Openfrmt {
 
       /* 1230 */
       await this.writeToBkmStream({
-        text: creationDate,
+        text: documentDate,
         maxLength: 8,
         isNumeric: true,
       });
@@ -701,7 +782,7 @@ class Openfrmt {
     for (let index = 0; index < income.length; index++) {
       // Loop & write d110 line for each item
       const currentIncome = income[index];
-      const paddedQuantity = currentIncome.quantity && currentIncome.quantity.toString().padEnd(4, '0');
+      const paddedQuantity = currentIncome.quantity && currentIncome.quantity.toString().padEnd(3, '0');
       const documentDate = invoice.documentDate ? dayjs(invoice.documentDate).format("YYYYMMDD") : '';
 
       try { 
@@ -730,10 +811,10 @@ class Openfrmt {
         await this.writeToBkmStream({
           text: invoice.serialNumber,
           maxLength: 20,
-          isNumeric: true
+          isNumeric: false
         });
         await this.writeToBkmStream({
-          text: index,
+          text: index + 1,
           maxLength: 4,
           isNumeric: true
         });
@@ -799,7 +880,7 @@ class Openfrmt {
           text: '',
           maxLength: 15,
           isNumeric: true,
-          sign: '-'
+          sign: '+'
         });
 
         /** 1267 */
@@ -811,13 +892,13 @@ class Openfrmt {
         });
         await this.writeToBkmStream({
           text: this.financial(this.vatRate),
-          maxLength: 5,
+          maxLength: 4,
           isNumeric: true,
         });
         await this.writeToBkmStream({
           text: '',
           maxLength: 7,
-          isNumeric: false,
+          isNumeric: true,
         });
         await this.writeToBkmStream({
           text: documentDate,
@@ -896,10 +977,10 @@ class Openfrmt {
         await this.writeToBkmStream({
           text: invoice.serialNumber,
           maxLength: 20,
-          isNumeric: true
+          isNumeric: false
         });
         await this.writeToBkmStream({
-          text: index,
+          text: index + 1,
           maxLength: 4,
           isNumeric: true
         });

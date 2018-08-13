@@ -4,24 +4,26 @@ const open = require('./open');
 const mock = [
   {
     id: '25fa123',
-    creationDate: 1470819922 * 1000,
+    creationDate: new Date(),
     type: '300',
     serialNumber: '7712',
-    documentDate: '2018-09-02',
+    documentDate: '2018-01-02',
     currency: 'ILS',
     isCancelled: false,
     patient: {
       id: '60qrasf2',
+      authorizedId: '',
       name: 'Zigmond Freud',
       address: {
-        country: 'Israel'
+        country: 'Israel',
+        countryCode: 'IL'
       },
       phone: "0775012340"
     },
     vatType: 0,
     payment: [
       {
-        date: '2018-09-01',
+        date: '2018-01-02',
         type: 4,
         price: 1200,
         currency: "ILS",
@@ -31,7 +33,7 @@ const mock = [
         bankBranch: '420',
       },
       {
-        date: '2018-01-10',
+        date: '2018-01-05',
         type: 3,
         price: 300,
         currency: "ILS",
@@ -59,9 +61,9 @@ const mock = [
   },
   {
     id: 'pqsd123',
-    creationDate: 1537524660 * 1000,
+    creationDate: new Date(),
     type: '320',
-    serialNumber: '22345648912345678113',
+    serialNumber: '7713',
     documentDate: '2018-01-11',
     currency: 'ILS',
     isCancelled: false,
@@ -108,12 +110,12 @@ const mock = [
   },
   {
     id: 't891xd',
-    creationDate: 1532786504 * 1000,
+    creationDate: new Date(),
     item: '',
     price: '',
     type: '320',
     serialNumber: '2234',
-    documentDate: '2018-12-12',
+    documentDate: '2018-01-07',
     currency: 'ILS',
     isCancelled: false,
     patient: {
@@ -125,7 +127,7 @@ const mock = [
     vatType: 1,
     payment: [
       {
-        date: '2018-11-25',
+        date: '2018-01-08',
         currency: 'ILS',
         type: 1,
         price: 300
@@ -150,7 +152,7 @@ const software = {
   mutliyear: true,
 }
 const user = {
-  companyId: '12345678',
+  companyId: '208600064',
   name: 'Eyal Cohen',
   address: {
     street: 'ארלוזורוב',
@@ -161,13 +163,14 @@ const user = {
 }
 const company = {
   name: 'Some Psychologist',
-  id: '12345678',
-  registrationNumber: '9346',
+  id: '208600064',
+  registrationNumber: '208600064',
 }
 
 const dates = {
-  start: new Date(),
-  end: new Date() + 10
+  fromDate: new Date(),
+  toDate: new Date() + 10,
+  processStartDate: new Date(),
 };
 
 const openfrmt = new Openfrmt({
@@ -183,5 +186,5 @@ const openfrmt = new Openfrmt({
 const path = openfrmt.getFoldersFullPath();
 console.log(openfrmt.generateReport());
 
-open(`${path}/INI.txt`);
+open(`${path}/BKMVDATA.txt`);
 
