@@ -1,7 +1,13 @@
 const fs = require('fs');
 const path = require('path');
+const iconv = require('iconv-lite');
+
 const dayjs = require('./dayjs');
 const leftpad = require('./left-pad');
+// const child_process = require("child_process");
+// child_process.execSync(`zip -r DESIRED_NAME_OF_ZIP_FILE_HERE *`, {
+//   cwd: PATH_TO_FOLDER_YOU_WANT_ZIPPED_HERE
+// });
 
 class Openfrmt {
   /*
@@ -27,14 +33,16 @@ class Openfrmt {
     software, 
     company, 
     invoices, 
-    user
+    user,
+    dates
   }) {
     this.invoices = invoices;
     this.destination = destination || '';
     this.user = user;
     this.software = software;
     this.company = company;
-    
+    this.dates = dates;
+
     this.vatRate = 17;
 
     this.bkmFileStream = null;
@@ -48,6 +56,7 @@ class Openfrmt {
   }
 
   async generateReport(companyId, fromDate, toDate) {
+    console.time();
     this.foldersPath = this.getFoldersFullPath();
     
     const uniqueFileId = this.getUniqueValue();
@@ -59,10 +68,10 @@ class Openfrmt {
 
       await this.writeA100(uniqueFileId, this.currentBkmvFileLine, this.user);
       this.currentBkmvFileLine += 1;
-      await this.writeInvoicesRows();
+      const rows = await this.writeInvoicesRows();
       await this.writeZ900(uniqueFileId, this.currentBkmvFileLine, this.user);
 
-      await this.writeIniFile(uniqueFileId);
+      await this.writeIniFile(uniqueFileId, rows);
     } catch (error) {
 
     }
@@ -78,8 +87,12 @@ class Openfrmt {
   }
 
   createStreams(foldersPath) {
-    this.bkmFileStream = fs.createWriteStream(path.resolve(__dirname, foldersPath, 'BKMVDATA.txt'));
-    this.iniFileStream = fs.createWriteStream(path.resolve(__dirname, foldersPath, 'INI.txt'));
+    try { 
+      this.bkmFileStream = fs.createWriteStream(path.resolve(__dirname, foldersPath, 'BKMVDATA.txt'));
+      this.iniFileStream = fs.createWriteStream(path.resolve(__dirname, foldersPath, 'INI.txt'));
+    } catch (Error) {
+      console.log(`[createStreams] Error ${error}`);
+    }
   }
 
   getFilesPath() {
@@ -95,9 +108,12 @@ class Openfrmt {
     };
   }
 
-  async writeIniFile(uniqueFileId) {
+  async writeIniFile(uniqueFileId, rows) {
     try {
+      console.log('TODO: Finish A000, Write rows summary');
       await this.writeA000(uniqueFileId, this.foldersPath)
+      console.log(rows);
+      console.timeEnd();
     } catch (error) {
       console.log(`[writeIniFile] Error: ${error}`);
     }
@@ -139,14 +155,13 @@ class Openfrmt {
         };
       }
 
-      console.log(invoicesBKMVMetaData)
+      return invoicesBKMVMetaData;
     } catch (error) {
       console.log(error);
     }
   }
 
   async writeA000(uniqueFile, foldersPath) {
-
     if (!this.iniFileStream) {
       throw new Error('[writeA000] No iniFileStream');
     }
@@ -157,6 +172,8 @@ class Openfrmt {
       city,
       zipCode
     } = this.user.address;
+    const startDate = this.dates && this.dates.start ? dayjs(this.dates.start).format("YYYYMMDD") : '';
+    const endDate = this.dates && this.dates.end ? dayjs(this.dates.end).format("YYYYMMDD") : '';
 
     try {
       await this.writeToIniStream({
@@ -276,7 +293,48 @@ class Openfrmt {
         isNumeric: false
       });
       
-      
+      await this.writeToIniStream({
+        text: startDate,
+        maxLength: 8,
+        isNumeric: true
+      });
+      await this.writeToIniStream({
+        text: endDate,
+        maxLength: 8,
+        isNumeric: true
+      });
+      await this.writeToIniStream({
+        text: '0',
+        maxLength: 1,
+        isNumeric: true
+      });
+      /* 1029 */
+      await this.writeToIniStream({
+        text: '1',
+        maxLength: 1,
+        isNumeric: true
+      });
+      await this.writeToIniStream({
+        text: 'zip',
+        maxLength: 20,
+        isNumeric: false
+      });
+      await this.writeToIniStream({
+        text: 'ILS',
+        maxLength: 20,
+        isNumeric: false
+      });
+      await this.writeToIniStream({
+        text: '0',
+        maxLength: 1,
+        isNumeric: true
+      });
+      await this.writeToIniStream({
+        text: '',
+        maxLength: 46,
+        isNumeric: false
+      });
+
       await this.writeToIniStream({
         text: '\r\n',
         withoutPad: true
@@ -1064,7 +1122,8 @@ class Openfrmt {
         }
       }
 
-      await this.bkmFileStream.write(sign ? `${sign}${text}` : text);
+      const encoded = iconv.encode(sign ? `${sign}${text}` : text, 'ISO-8859-8');
+      await this.bkmFileStream.write(encoded);
     } catch (error) {
       console.log(error);
     }
@@ -1101,7 +1160,8 @@ class Openfrmt {
         }
       }
 
-      await this.iniFileStream.write(sign ? `${sign}${text}` : text);
+      const encoded = iconv.encode(sign ? `${sign}${text}` : text, 'ISO-8859-8');
+      await this.iniFileStream.write(encoded);
     } catch (error) {
       console.log(error);
     }

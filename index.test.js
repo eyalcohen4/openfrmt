@@ -165,14 +165,19 @@ const company = {
   registrationNumber: '9346',
 }
 
-console.log(user);
+const dates = {
+  start: new Date(),
+  end: new Date() + 10
+};
+
 const openfrmt = new Openfrmt({
   destination: './', 
   software, 
   company, 
   company, 
   invoices: mock, 
-  user
+  user,
+  dates
 });
 
 const path = openfrmt.getFoldersFullPath();
