@@ -1,3 +1,5 @@
+const pup = require('puppeteer');
+
 const Openfrmt = require('./index');
 const open = require('./open');
 
@@ -188,3 +190,18 @@ console.log(openfrmt.generateReport());
 
 open(`${path}/BKMVDATA.txt`);
 
+(async () => {
+  const browser = await pup.launch({ headless: false });
+  const page = await browser.newPage();
+  await page.goto('https://www.misim.gov.il/TmbakmmsmlNew/frmCheckFiles.aspx');
+  const charsetDropdown = await page.$('select#ddlEncoding');
+  const iniInput = await page.$('input[name="ctl00$ContentUsersPage$UcUploadFiles1$txtFile1"]');
+  const bkmInput = await page.$('input[name="ctl00$ContentUsersPage$UcUploadFiles1$txtFile2"]');
+  const continueButton = await page.$('input[name="ctl00$ContentUsersPage$UcUploadFiles1$btnCheck"]');
+
+  await page.select('select#ddlEncoding', '1')
+  await iniInput.uploadFile(`${path}/INI.txt`)
+  await bkmInput.uploadFile(`${path}/BKMVDATA.txt`)
+  await continueButton.click();
+  // await browser.close();
+})();

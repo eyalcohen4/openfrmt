@@ -18,6 +18,8 @@
   "homepage": "https://github.com/eyalcohen4/openfrmt#readme",
   "description": "",
   "dependencies": {
-    "iconv-lite": "^0.4.23"
+    "iconv-lite": "^0.4.23",
+    "puppeteer": "^1.7.0",
+    "puppeteer-core": "^1.7.0"
   }
 }
