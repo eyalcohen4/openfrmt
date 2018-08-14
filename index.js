@@ -862,6 +862,7 @@ class Openfrmt {
           isNumeric: false
         });
 
+        console.log(paddedQuantity);
         await this.writeToBkmStream({
           text: paddedQuantity,
           maxLength: 17,
@@ -890,6 +891,7 @@ class Openfrmt {
           isNumeric: true,
           sign: '+'
         });
+        console.log(this.financial(this.vatRate));
         await this.writeToBkmStream({
           text: this.financial(this.vatRate),
           maxLength: 4,
@@ -991,36 +993,32 @@ class Openfrmt {
           isNumeric: true
         });
 
-        if (currentPayment.type === 2) {
-          await this.writeToBkmStream({
-            text: currentPayment.bankNumber,
-            maxLength: 10,
-            isNumeric: true
-          });
-          await this.writeToBkmStream({
-            text: currentPayment.bankBranch,
-            maxLength: 10,
-            isNumeric: true
-          });
-          await this.writeToBkmStream({
-            text: currentPayment.bankAccount,
-            maxLength: 15,
-            isNumeric: true
-          });
-          await this.writeToBkmStream({
-            text: currentPayment.chequeNum,
-            maxLength: 10,
-            isNumeric: true
-          });
-        }
+        await this.writeToBkmStream({
+          text: currentPayment.bankNumber,
+          maxLength: 10,
+          isNumeric: true
+        });
+        await this.writeToBkmStream({
+          text: currentPayment.bankBranch || '',
+          maxLength: 10,
+          isNumeric: true
+        });
+        await this.writeToBkmStream({
+          text: currentPayment.bankAccount || '',
+          maxLength: 15,
+          isNumeric: true
+        });
+        await this.writeToBkmStream({
+          text: currentPayment.chequeNum || '',
+          maxLength: 10,
+          isNumeric: true
+        });
 
-        if (currentPayment.type === 2 || currentPayment.type === 3) {
-          await this.writeToBkmStream({
-            text: paymentDate,
-            maxLength: 8,
-            isNumeric: true
-          });
-        }
+        await this.writeToBkmStream({
+          text: currentPayment.type === 2 || currentPayment.type === 3 ? paymentDate : '',
+          maxLength: 8,
+          isNumeric: true
+        });
 
         /* 1312 */
         await this.writeToBkmStream({
@@ -1030,23 +1028,21 @@ class Openfrmt {
           sign: '+'
         });
 
-        if (currentPayment.type === 3) {
-          await this.writeToBkmStream({
-            text: currentPayment.cardType,
-            maxLength: 1,
-            isNumeric: true
-          });
-          await this.writeToBkmStream({
-            text: '',
-            maxLength: 20,
-            isNumeric: false
-          })
-          await this.writeToBkmStream({
-            text: currentPayment.dealType,
-            maxLength: 1,
-            isNumeric: true
-          })
-        }
+        await this.writeToBkmStream({
+          text: currentPayment.cardType || '',
+          maxLength: 1,
+          isNumeric: true
+        });
+        await this.writeToBkmStream({
+          text: '',
+          maxLength: 20,
+          isNumeric: false
+        });
+        await this.writeToBkmStream({
+          text: currentPayment.dealType || '',
+          maxLength: 1,
+          isNumeric: true
+        });
 
         await this.writeToBkmStream({
           text: '',
@@ -1220,7 +1216,7 @@ class Openfrmt {
     sign = ''
   }) {
     try {
-      if (text === null) {
+      if (text === null || typeof text === 'undefined') {
         text = '';
       }
 

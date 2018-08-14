@@ -186,7 +186,7 @@ const openfrmt = new Openfrmt({
 });
 
 const path = openfrmt.getFoldersFullPath();
-console.log(openfrmt.generateReport());
+openfrmt.generateReport();
 
 open(`${path}/BKMVDATA.txt`);
 
