@@ -8,12 +8,12 @@ const mock = [
     id: '25fa123',
     creationDate: new Date(),
     type: '300',
-    serialNumber: '7712',
+    serialNumber: '1112',
     documentDate: '2018-01-02',
     currency: 'ILS',
     isCancelled: false,
     patient: {
-      id: '60qrasf2',
+      id: 'pasd123',
       authorizedId: '',
       name: 'Zigmond Freud',
       address: {
@@ -156,6 +156,7 @@ const software = {
 const user = {
   companyId: '208600064',
   name: 'Eyal Cohen',
+  email: 'eyalcohen4.ec@gmail.com',
   address: {
     street: 'ארלוזורוב',
     houseNumber: '25',

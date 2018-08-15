@@ -96,7 +96,6 @@ class Openfrmt {
   }
 
   getFilesPath() {
-    console.log(this.user);
     const companyId = this.user.companyId.substring(0, 8);
     const year = new Date().getFullYear().toString().substring(2, 4);
     const firstFolderName = `${companyId}.${year}`;
@@ -110,10 +109,8 @@ class Openfrmt {
 
   async writeIniFile(uniqueFileId, rows) {
     try {
-      console.log('TODO: Finish A000, Write rows summary');
       await this.writeA000(uniqueFileId, this.foldersPath)
       await this.writeIniRowsSummaries(rows);
-      console.log(rows);
       console.timeEnd();
     } catch (error) {
       console.log(`[writeIniFile] Error: ${error}`);
@@ -147,8 +144,8 @@ class Openfrmt {
         this.C100LinesCount += 1;
         this.currentBkmvFileLine += 1;
 
-        const d110LinesCount = await this.writeD110(this.currentBkmvFileLine, this.invoices[i]);
-        const d120LinesCount = await this.writeD120(this.currentBkmvFileLine, this.invoices[i]);
+        const d110LinesCount = await this.writeD110(this.invoices[i]);
+        const d120LinesCount = await this.writeD120(this.invoices[i]);
 
         invoicesBKMVMetaData[i] = {
           D110: d110LinesCount,
@@ -575,7 +572,7 @@ class Openfrmt {
       });
       await this.writeToBkmStream({
         text: invoice.type,
-        maxLength: 9,
+        maxLength: 3,
         isNumeric: true,
         withoutPad: true
       });
@@ -736,8 +733,14 @@ class Openfrmt {
       });
 
       await this.writeToBkmStream({
-        text: ' ',
+        text: null,
         maxLength: 7,
+        isNumeric: false,
+      });
+      
+      await this.writeToBkmStream({
+        text: null,
+        maxLength: 9,
         isNumeric: false,
       });
 
@@ -765,7 +768,7 @@ class Openfrmt {
     }
   }
 
-  async writeD110(currentLine, invoice) {
+  async writeD110(invoice) {
     if (!this.bkmFileStream) {
       throw new Error('[writeD110] No bkmFileStream');
     }
@@ -782,7 +785,7 @@ class Openfrmt {
     for (let index = 0; index < income.length; index++) {
       // Loop & write d110 line for each item
       const currentIncome = income[index];
-      const paddedQuantity = currentIncome.quantity && currentIncome.quantity.toString().padEnd(3, '0');
+      const paddedQuantity = currentIncome.quantity && currentIncome.quantity.toString().padEnd(6 - currentIncome.quantity.toString().length , '0');
       const documentDate = invoice.documentDate ? dayjs(invoice.documentDate).format("YYYYMMDD") : '';
 
       try { 
@@ -791,7 +794,7 @@ class Openfrmt {
           withoutPad: true
         });
         await this.writeToBkmStream({
-          text: currentLine,
+          text: this.currentBkmvFileLine,
           maxLength: 9,
           isNumeric: true
         });
@@ -881,7 +884,7 @@ class Openfrmt {
           text: '',
           maxLength: 15,
           isNumeric: true,
-          sign: '+'
+          sign: '-'
         });
 
         /** 1267 */
@@ -900,7 +903,7 @@ class Openfrmt {
         await this.writeToBkmStream({
           text: '',
           maxLength: 7,
-          isNumeric: true,
+          isNumeric: false,
         });
         await this.writeToBkmStream({
           text: documentDate,
@@ -934,7 +937,7 @@ class Openfrmt {
     return linesCount;
   }
 
-  async writeD120(currentLine, invoice) {
+  async writeD120(invoice) {
     if (!this.bkmFileStream) {
       throw new Error('[writeD120] No bkmFileStream');
     }
@@ -961,7 +964,7 @@ class Openfrmt {
           withoutPad: true
         });
         await this.writeToBkmStream({
-          text: currentLine,
+          text: this.currentBkmvFileLine,
           maxLength: 9,
           isNumeric: true
         });
@@ -972,7 +975,7 @@ class Openfrmt {
         });
         await this.writeToBkmStream({
           text: invoice.type,
-          maxLength: 9,
+          maxLength: 3,
           isNumeric: true,
           withoutPad: true
         });
@@ -986,7 +989,7 @@ class Openfrmt {
           maxLength: 4,
           isNumeric: true
         });
-        /** 1303 */
+        /** 1306 */
         await this.writeToBkmStream({
           text: currentPayment.type,
           maxLength: 1,
@@ -994,7 +997,7 @@ class Openfrmt {
         });
 
         await this.writeToBkmStream({
-          text: currentPayment.bankNumber,
+          text: currentPayment.bankNumber || '',
           maxLength: 10,
           isNumeric: true
         });
@@ -1054,6 +1057,7 @@ class Openfrmt {
           maxLength: 8,
           isNumeric: true
         });
+        console.log(invoice.serialNumber);
         await this.writeToBkmStream({
           text: invoice.serialNumber,
           maxLength: 7,
@@ -1071,8 +1075,8 @@ class Openfrmt {
           withoutPad: true
         });
 
-        linesCount += 1;
         this.currentBkmvFileLine += 1;
+        linesCount += 1;
       } catch (error) {
         console.log(`[writeD120] Error: ${error}`);
       }
@@ -1178,7 +1182,7 @@ class Openfrmt {
     sign = ''
   }) {
     try {
-      if (text === null) {
+      if (text === null || typeof text === 'undefined' || text === undefined) {
         text = '';
       }
 
@@ -1216,7 +1220,7 @@ class Openfrmt {
     sign = ''
   }) {
     try {
-      if (text === null || typeof text === 'undefined') {
+      if (text === null || typeof text === 'undefined' || text === undefined) {
         text = '';
       }
 
