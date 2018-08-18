@@ -7,7 +7,7 @@ const mock = [
   {
     id: '25fa123',
     creationDate: new Date(),
-    type: '300',
+    type: '400',
     serialNumber: '1112',
     documentDate: '2018-01-02',
     currency: 'ILS',
@@ -22,7 +22,7 @@ const mock = [
       },
       phone: "0775012340"
     },
-    vatType: 0,
+    vatType: 1,
     payment: [
       {
         date: '2018-01-02',
@@ -64,7 +64,7 @@ const mock = [
   {
     id: 'pqsd123',
     creationDate: new Date(),
-    type: '320',
+    type: '305',
     serialNumber: '7713',
     documentDate: '2018-01-11',
     currency: 'ILS',
@@ -113,9 +113,7 @@ const mock = [
   {
     id: 't891xd',
     creationDate: new Date(),
-    item: '',
-    price: '',
-    type: '320',
+    type: '300',
     serialNumber: '2234',
     documentDate: '2018-01-07',
     currency: 'ILS',

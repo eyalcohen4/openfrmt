@@ -42,6 +42,7 @@ class Openfrmt {
     this.software = software;
     this.company = company;
     this.dates = dates;
+    this.alreadyWrittenB110PatientsIds = [];
 
     this.vatRate = 17;
 
@@ -90,7 +91,7 @@ class Openfrmt {
     try { 
       this.bkmFileStream = fs.createWriteStream(path.resolve(__dirname, foldersPath, 'BKMVDATA.txt'));
       this.iniFileStream = fs.createWriteStream(path.resolve(__dirname, foldersPath, 'INI.txt'));
-    } catch (Error) {
+    } catch (error) {
       console.log(`[createStreams] Error ${error}`);
     }
   }
@@ -140,12 +141,23 @@ class Openfrmt {
       const invoicesBKMVMetaData = [];
 
       for (let i = 0; i < this.invoices.length; i++) {
-        await this.writeC100(this.currentBkmvFileLine, this.invoices[i]);
+        const currentInvoice = this.invoices[i];
+        if (
+          currentInvoice && 
+          currentInvoice.patient && 
+          !this.alreadyWrittenB110PatientsIds.includes(currentInvoice.patient.id)
+        ) {
+          await this.writeB110(this.currentBkmvFileLine, currentInvoice.patient);
+        }
+
+        this.currentBkmvFileLine += 1;
+
+        await this.writeC100(this.currentBkmvFileLine, currentInvoice);
         this.C100LinesCount += 1;
         this.currentBkmvFileLine += 1;
 
-        const d110LinesCount = await this.writeD110(this.invoices[i]);
-        const d120LinesCount = await this.writeD120(this.invoices[i]);
+        const d110LinesCount = await this.writeD110(currentInvoice);
+        const d120LinesCount = await this.writeD120(currentInvoice);
 
         invoicesBKMVMetaData[i] = {
           D110: d110LinesCount,
@@ -168,7 +180,8 @@ class Openfrmt {
 
       const d110Total = rows.reduce((prev, curr) => prev + curr['D110'], 0);
       const d120Total = rows.reduce((prev, curr) => prev + curr['D120'], 0);
-      
+      const b110Total = this.alreadyWrittenB110PatientsIds && this.alreadyWrittenB110PatientsIds.length || 0;
+
       await this.writeToIniStream({
         text: 'C100',
         maxLength: 4,
@@ -177,6 +190,20 @@ class Openfrmt {
       
       await this.writeToIniStream({
         text: this.C100LinesCount,
+        maxLength: 15,
+        isNumeric: true
+      });
+      await this.writeToIniStream({
+        text: '\r\n',
+        withoutPad: true
+      });
+      await this.writeToIniStream({
+        text: 'B110',
+        maxLength: 4,
+        isNumeric: false
+      });
+      await this.writeToIniStream({
+        text: b110Total,
         maxLength: 15,
         isNumeric: true
       });
@@ -519,6 +546,157 @@ class Openfrmt {
       });
     } catch (error) {
       console.log(`[writeA100] Error: ${error}`);
+    }
+  }
+
+  async writeB110(currentLine, patient) {
+    if (!this.bkmFileStream) {
+      throw new Error('[writeB110] No bkmFileStream')
+    }
+
+    const {
+      street,
+      houseNumber,
+      city,
+      zipCode,
+      country,
+      countryCode
+    } = patient.address;
+
+    try {
+      /* 1400 */
+      await this.writeToBkmStream({
+        text: 'B110',
+        withoutPad: true
+      });
+      await this.writeToBkmStream({
+        text: currentLine,
+        maxLength: 9,
+        isNumeric: true
+      });
+      await this.writeToBkmStream({
+        text: this.user.companyId,
+        maxLength: 9,
+        isNumeric: true,
+        withoutPad: true
+      });
+      await this.writeToBkmStream({
+        text: patient.id,
+        maxLength: 15,
+        isNumeric: false,
+      });
+      await this.writeToBkmStream({
+        text: patient.name,
+        maxLength: 50,
+        isNumeric: false,
+      });
+      await this.writeToBkmStream({
+        text: 'קוד מאזן בוחן',
+        maxLength: 15,
+        isNumeric: false,
+      });
+      await this.writeToBkmStream({
+        text: patient.name,
+        maxLength: 30,
+        isNumeric: false,
+      });
+
+      await this.writeToBkmStream({
+        text: street || '',
+        maxLength: 50,
+        isNumeric: false
+      });
+      await this.writeToBkmStream({
+        text: houseNumber || '',
+        maxLength: 10,
+        isNumeric: false
+      });
+      await this.writeToBkmStream({
+        text: city || '',
+        maxLength: 30,
+        isNumeric: false
+      });
+      await this.writeToBkmStream({
+        text: zipCode || '',
+        maxLength: 8,
+        isNumeric: false
+      });
+      await this.writeToBkmStream({
+        text: country || '',
+        maxLength: 30,
+        isNumeric: false
+      });
+      await this.writeToBkmStream({
+        text: countryCode || '',
+        maxLength: 2,
+        isNumeric: false
+      });
+
+      /* 1413 */
+      await this.writeToBkmStream({
+        text: '',
+        maxLength: 15,
+        isNumeric: false
+      });
+
+      await this.writeToBkmStream({
+        text: 0.00,
+        maxLength: 15,
+        isNumeric: true,
+        sign: '+'
+      });
+      await this.writeToBkmStream({
+        text: 0.00,
+        maxLength: 15,
+        isNumeric: true,
+        sign: '+'
+      });
+      await this.writeToBkmStream({
+        text: 0.00,
+        maxLength: 15,
+        isNumeric: true,
+        sign: '+'
+      });
+      await this.writeToBkmStream({
+        text: null,
+        maxLength: 4,
+        isNumeric: true,
+      });
+      await this.writeToBkmStream({
+        text: patient.authorizedId || patient.id,
+        maxLength: 9,
+        isNumeric: true,
+      });
+      await this.writeToBkmStream({
+        text: null,
+        maxLength: 7,
+        isNumeric: false,
+      });
+      await this.writeToBkmStream({
+        text: 0.00,
+        maxLength: 15,
+        isNumeric: true,
+        sign: '+'
+      });
+      await this.writeToBkmStream({
+        text: 'ILS',
+        maxLength: 3,
+        isNumeric: false,
+      });
+      await this.writeToBkmStream({
+        text: '',
+        maxLength: 16,
+        isNumeric: false,
+      });
+
+      // Last Row
+      await this.writeToBkmStream({
+        text: '\r\n',
+        withoutPad: true
+      });
+      
+    } catch (error) {
+      console.log(`[writeB110] Error ${error}`)
     }
   }
 
@@ -865,7 +1043,6 @@ class Openfrmt {
           isNumeric: false
         });
 
-        console.log(paddedQuantity);
         await this.writeToBkmStream({
           text: paddedQuantity,
           maxLength: 17,
@@ -894,11 +1071,11 @@ class Openfrmt {
           isNumeric: true,
           sign: '+'
         });
-        console.log(this.financial(this.vatRate));
         await this.writeToBkmStream({
           text: this.financial(this.vatRate),
           maxLength: 4,
           isNumeric: true,
+          withoutPad: true
         });
         await this.writeToBkmStream({
           text: '',
@@ -1057,7 +1234,7 @@ class Openfrmt {
           maxLength: 8,
           isNumeric: true
         });
-        console.log(invoice.serialNumber);
+
         await this.writeToBkmStream({
           text: invoice.serialNumber,
           maxLength: 7,
@@ -1179,9 +1356,14 @@ class Openfrmt {
     withoutPad = false,
     rightPad = false,
     ignoreDot = false,
-    sign = ''
+    sign = '',
+    logDebug = false
   }) {
     try {
+      if (logDebug) {
+        console.log(text);
+      }
+
       if (text === null || typeof text === 'undefined' || text === undefined) {
         text = '';
       }
