@@ -42,7 +42,7 @@ class Openfrmt {
     this.software = software;
     this.company = company;
     this.dates = dates;
-    this.alreadyWrittenB110PatientsIds = [];
+    this.b110UserIds = [];
 
     this.vatRate = 17;
 
@@ -145,9 +145,10 @@ class Openfrmt {
         if (
           currentInvoice && 
           currentInvoice.patient && 
-          !this.alreadyWrittenB110PatientsIds.includes(currentInvoice.patient.id)
+          !this.b110UserIds.includes(currentInvoice.patient.id)
         ) {
           await this.writeB110(this.currentBkmvFileLine, currentInvoice.patient);
+          this.b110UserIds.push(currentInvoice.patient.id);
         }
 
         this.currentBkmvFileLine += 1;
@@ -180,14 +181,14 @@ class Openfrmt {
 
       const d110Total = rows.reduce((prev, curr) => prev + curr['D110'], 0);
       const d120Total = rows.reduce((prev, curr) => prev + curr['D120'], 0);
-      const b110Total = this.alreadyWrittenB110PatientsIds && this.alreadyWrittenB110PatientsIds.length || 0;
+      const b110Total = this.b110UserIds && this.b110UserIds.length || 0;
 
+      console.log(b110Total);
       await this.writeToIniStream({
         text: 'C100',
         maxLength: 4,
         isNumeric: false
       });
-      
       await this.writeToIniStream({
         text: this.C100LinesCount,
         maxLength: 15,
@@ -853,7 +854,7 @@ class Openfrmt {
         isNumeric: true,
         sign: discountSign
       });
-      
+
       await this.writeToBkmStream({
         text: incomeAfterDiscount,
         maxLength: 15,

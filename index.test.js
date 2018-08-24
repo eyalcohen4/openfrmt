@@ -1,70 +1,71 @@
 const pup = require('puppeteer');
-
+const path = require('path');
 const Openfrmt = require('./index');
 const open = require('./open');
+const { exec } = require('child_process');
 
 const mock = [
-  {
-    id: '25fa123',
-    creationDate: new Date(),
-    type: '400',
-    serialNumber: '1112',
-    documentDate: '2018-01-02',
-    currency: 'ILS',
-    isCancelled: false,
-    patient: {
-      id: 'pasd123',
-      authorizedId: '',
-      name: 'Zigmond Freud',
-      address: {
-        country: 'Israel',
-        countryCode: 'IL'
-      },
-      phone: "0775012340"
-    },
-    vatType: 1,
-    payment: [
-      {
-        date: '2018-01-02',
-        type: 4,
-        price: 1200,
-        currency: "ILS",
-        bankName: 'Mizrahi Tefahot',
-        bankNumber: 20,
-        bankAccount: '201911',
-        bankBranch: '420',
-      },
-      {
-        date: '2018-01-05',
-        type: 3,
-        price: 300,
-        currency: "ILS",
-        cardType: 2,
-        cardNum: '1234',
-        dealType: 1,
-      },
-    ],
-    income: [
-      {
-        price: 300.00,
-        quantity: 4,
-        currency: 'ILS',
-        vatType: 1,
-        description: 'טיפול קליני'
-      },
-      {
-        price: 300.00,
-        quantity: 1,
-        currency: 'ILS',
-        vatType: 0,
-        description: 'ייעוץ והדרכה',
-      }
-    ]
-  },
+  // {
+  //   id: '25fa123',
+  //   creationDate: new Date(),
+  //   type: '400',
+  //   serialNumber: '1112',
+  //   documentDate: '2018-01-02',
+  //   currency: 'ILS',
+  //   isCancelled: false,
+  //   patient: {
+  //     id: 'pasd123',
+  //     authorizedId: '',
+  //     name: 'Zigmond Freud',
+  //     address: {
+  //       country: 'Israel',
+  //       countryCode: 'IL'
+  //     },
+  //     phone: "0775012340"
+  //   },
+  //   vatType: 1,
+  //   payment: [
+  //     {
+  //       date: '2018-01-02',
+  //       type: 4,
+  //       price: 1200,
+  //       currency: "ILS",
+  //       bankName: 'Mizrahi Tefahot',
+  //       bankNumber: 20,
+  //       bankAccount: '201911',
+  //       bankBranch: '420',
+  //     },
+  //     {
+  //       date: '2018-01-05',
+  //       type: 3,
+  //       price: 300,
+  //       currency: "ILS",
+  //       cardType: 2,
+  //       cardNum: '1234',
+  //       dealType: 1,
+  //     },
+  //   ],
+  //   income: [
+  //     {
+  //       price: 300.00,
+  //       quantity: 4,
+  //       currency: 'ILS',
+  //       vatType: 1,
+  //       description: 'טיפול קליני'
+  //     },
+  //     {
+  //       price: 300.00,
+  //       quantity: 1,
+  //       currency: 'ILS',
+  //       vatType: 0,
+  //       description: 'ייעוץ והדרכה',
+  //     }
+  //   ]
+  // },
   {
     id: 'pqsd123',
     creationDate: new Date(),
-    type: '305',
+    type: '300',
     serialNumber: '7713',
     documentDate: '2018-01-11',
     currency: 'ILS',
@@ -80,9 +81,9 @@ const mock = [
         country: 'ישראל',
         countryCode: 'IL'
       },
-      phone: "+97254231234"
+      phone: "97254231234"
     },
-    vatType: 0,
+    vatType: 1,
     discount: {
       amount: 20,
       type: 'percentage'
@@ -102,7 +103,7 @@ const mock = [
     ],
     income: [
       {
-        price: 300.00,
+        price: 300,
         quantity: 2,
         currency: 'ILS',
         vatType: 0,
@@ -110,39 +111,39 @@ const mock = [
       }
     ]
   },
-  {
-    id: 't891xd',
-    creationDate: new Date(),
-    type: '300',
-    serialNumber: '2234',
-    documentDate: '2018-01-07',
-    currency: 'ILS',
-    isCancelled: false,
-    patient: {
-      id: '60qrasf2',
-      name: 'Alice Miller',
-      address: {},
-      phone: "0526262412"
-    },
-    vatType: 1,
-    payment: [
-      {
-        date: '2018-01-08',
-        currency: 'ILS',
-        type: 1,
-        price: 300
-      }
-    ],
-    income: [
-      {
-        price: 250.00,
-        quantity: 1,
-        currency: 'ILS',
-        vatType: 0,
-        description: 'CBT'
-      }
-    ]
-  }
+  // {
+  //   id: 't891xd',
+  //   creationDate: new Date(),
+  //   type: '320',
+  //   serialNumber: '2234',
+  //   documentDate: '2018-01-07',
+  //   currency: 'ILS',
+  //   isCancelled: false,
+  //   patient: {
+  //     id: '60qrasf2',
+  //     name: 'Alice Miller',
+  //     address: {},
+  //     phone: "0526262412"
+  //   },
+  //   vatType: 1,
+  //   payment: [
+  //     {
+  //       date: '2018-01-08',
+  //       currency: 'ILS',
+  //       type: 1,
+  //       price: 300
+  //     }
+  //   ],
+  //   income: [
+  //     {
+  //       price: 250.00,
+  //       quantity: 1,
+  //       currency: 'ILS',
+  //       vatType: 0,
+  //       description: 'CBT'
+  //     }
+  //   ]
+  // }
 ];
 const software = {
   name: 'Betty',
@@ -184,10 +185,29 @@ const openfrmt = new Openfrmt({
   dates
 });
 
-const path = openfrmt.getFoldersFullPath();
+
+const foldersPath = openfrmt.getFoldersFullPath();
+const parentFoldersPath = path.normalize(foldersPath).split('/')[0];
+
+
 openfrmt.generateReport();
 
-open(`${path}/BKMVDATA.txt`);
+open(`${foldersPath}/BKMVDATA.txt`);
+
+async function uploadToTestModule(browser) {
+  const page = await browser.newPage();
+  await page.goto('https://www.misim.gov.il/TmbakmmsmlNew/frmShowDialog.aspx?cur=3');
+  const charsetDropdown = await page.$('select#ddlEncoding');
+  const iniInput = await page.$('input[name="ctl00$ContentUsersPage$UcUploadFiles1$txtFile1"]');
+  const bkmInput = await page.$('input[name="ctl00$ContentUsersPage$UcUploadFiles1$txtFile2"]');
+  const continueButton = await page.$('input[name="ctl00$ContentUsersPage$UcUploadFiles1$btnCheck"]');
+
+  await page.select('select#ddlEncoding', '1')
+  await iniInput.uploadFile(`${foldersPath}/INI.txt`)
+  await bkmInput.uploadFile(`${foldersPath}/BKMVDATA.txt`)
+  await continueButton.click();
+  
+}
 
 (async () => {
   const browser = await pup.launch({ headless: false });
@@ -199,8 +219,11 @@ open(`${path}/BKMVDATA.txt`);
   const continueButton = await page.$('input[name="ctl00$ContentUsersPage$UcUploadFiles1$btnCheck"]');
 
   await page.select('select#ddlEncoding', '1')
-  await iniInput.uploadFile(`${path}/INI.txt`)
-  await bkmInput.uploadFile(`${path}/BKMVDATA.txt`)
+  await iniInput.uploadFile(`${foldersPath}/INI.txt`)
+  await bkmInput.uploadFile(`${foldersPath}/BKMVDATA.txt`)
   await continueButton.click();
+  await uploadToTestModule(browser);
   // await browser.close();
 })();
+
+
