@@ -183,7 +183,6 @@ class Openfrmt {
       const d120Total = rows.reduce((prev, curr) => prev + curr['D120'], 0);
       const b110Total = this.b110UserIds && this.b110UserIds.length || 0;
 
-      console.log(b110Total);
       await this.writeToIniStream({
         text: 'C100',
         maxLength: 4,
@@ -710,7 +709,9 @@ class Openfrmt {
       const creationDate = invoice.creationDate ? dayjs(invoice.creationDate).format("YYYYMMDD") : '';
       const creationTime = invoice.creationDate ? dayjs(invoice.creationDate).format("HHmm") : '';
       const documentDate = invoice.documentDate ? dayjs(invoice.documentDate).format("YYYYMMDD") : '';
-      const incomeBeforeDiscount = this.getTotalIncomeBeforeDiscount(invoice.income);
+      const incomeBeforeDiscount = this.getTotalIncomeBeforeDiscount(invoice);
+      console.log(incomeBeforeDiscount);
+
       const discountAmount = (
         invoice.discount ? 
         this.calculateDiscount(invoice.discount, incomeBeforeDiscount) : 
@@ -1285,23 +1286,28 @@ class Openfrmt {
     return this.financial(incomeAfterDiscount)
   }
 
-  getTotalIncomeBeforeDiscount(incomes) {
-    let total = 0;
+  getTotalIncomeBeforeDiscount(invoice) {
+    if (invoice.income && invoice.income.length) {
+      let total = 0;
 
-    for (let i = 0; i < incomes.length; i++) {
-      const {
-        price,
-        quantity
-      } = incomes[i];
+      for (let i = 0; i < invoice.income.length; i++) {
+        const { price, quantity } = invoice.income[i];
 
-      if (!price) {
-        throw new Error('[getTotalIncomeBeforeDiscount] No price provided in income');
+        if (!price) {
+          throw new Error('[getTotalIncomeBeforeDiscount] No price provided in income');
+        }
+
+        total += price * (quantity || 1)
       }
 
-      total += price * (quantity || 1)
-    }
+      return this.financial(total);
+    } 
 
-    return this.financial(total);
+    if (invoice.payment && invoice.payment.length) {
+      let total = invoice.payment.reduce((prev, current) => prev + current.price, 0);
+
+      return this.financial(total);
+    }
   }
 
   calculateVat({
